@@ -46,20 +46,32 @@ class User(db.Model):
                     auto_bind=AUTO_BIND_NO_TLS,
                     read_only=True,
                     check_names=True,
-                    user='ldapreader', password='ld@pr3ad3r!') as c:
+                    user='ldapreader', password='ld@pr3ad3r!') as c1:
  
-            c.search(search_base='OU=RIMNET_ILM,DC=ad0,DC=bblabs',
+            c1.search(search_base='OU=RIMNET_ILM,DC=ad0,DC=bblabs',
                  search_filter='(&(samAccountName=' + username + '))',
                  search_scope=SUBTREE,
                  attributes=ALL_ATTRIBUTES,
                  get_operational_attributes=True)
  
-        response = c.response
+        with Connection(Server('dc-g01.ad0.bblabs', port=636, use_ssl=True),
+                    auto_bind=AUTO_BIND_NO_TLS,
+                    read_only=True,
+                    check_names=True,
+                    user=c1.response[0]['dn'], password=passwd) as c2:
+ 
+            c2.search(search_base='OU=RIMNET_ILM,DC=ad0,DC=bblabs',
+                 search_filter='(&(samAccountName=' + username + '))',
+                 search_scope=SUBTREE,
+                 attributes=ALL_ATTRIBUTES,
+                 get_operational_attributes=True)
+        
+        response = c2.response
         print(response[0]['dn'])
 
 
 
-        print(c.result)
+        print(c2.result)
         print("done in here")
  
     def get_id(self):
