@@ -1,31 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Flask Authentication with LDAP Tutorial</title>
-  </head>
-  <body>
+    <title>Lifeguard: Web Based Server Pool Management</title>
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css-lib/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css-lib/bootstrap-theme.min.css') }}" rel="stylesheet">
+</head>
+<body role="document" id="body">
+<div class="container">
     <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-      <div class="container">
         <div class="navbar-header">
-          <a class="navbar-brand" href="{{ url_for('auth.home') }}">Flask LDAP Demo</a>
+            <a class="navbar-brand" href="{{ url_for('auth.home') }}">Auth</a> |
+            <a class="navbar-brand" href="{{ url_for('zones.list') }}">Zones</a>
         </div>
-      </div>
     </div>
-    <br/>
+</div>
+<br/>
+<div class="container">
     <div>
-      {% for category, message in get_flashed_messages(with_categories=true) %}
-        <div class="alert alert-{{category}} alert-dismissable">
-          <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-          {{ message }}
-        </div>
-      {% endfor %}
-      </div>
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+            <div class="alert alert-{{ category }} alert-dismissable">
+                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
 
     {% block container %}{% endblock %}
-    </div>
- 
-  </body>
+</div>
+<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+<script src="{{ url_for('static', filename='js-lib/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js-lib/jquery-2.1.3.js') }}"></script>
+{% block scripts %}
+{% endblock %}
+
 </html>

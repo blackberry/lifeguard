@@ -1,0 +1,11 @@
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://username:password@localhost/lifeguard'
+WTF_CSRF_SECRET_KEY = 'changeme'
+SECRET_KEY = 'changeme'
+LDAP_ADMIN_GROUP = 'CN=IPGBD,OU=Hadoop,DC=ad0,DC=bblabs'
+LDAP_USER_SEARCH_BASE = 'OU=RIMNET_ILM,DC=ad0,DC=bblabs'
+LDAP_PROVIDER_URL = 'dc-g01.ad0.bblabs'
+LDAP_PROVIDER_PORT = 636
+LDAP_PROTOCOL_VERSION = 3
+LDAP_USER_SEARCH_FILTER = 'samAccountName'
+LDAP_READER_USERNAME = 'username'
+LDAP_READER_PASSWORD = 'changme'
