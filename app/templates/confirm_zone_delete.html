@@ -1,7 +1,12 @@
 {% extends "zones.html" %}
 {% block container %}
-    <form action="" method="post" name="new_style">
-        {{form.hidden_tag()}}
+    <form
+            method="POST"
+            action="{{ url_for('zone_bp.delete', object_id=zone.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <h3>Please confirm...</h3>
+        <p>Are you sure you want to permanently delete the zone: {{ zone.name }}?</p>
         <p><input type="submit" name="action" value="Cancel"> <input type="submit" name="action" value="Confirm"></p>
     </form>
 {% endblock %}

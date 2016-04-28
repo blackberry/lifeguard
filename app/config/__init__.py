@@ -21,7 +21,7 @@ class Config:
     with open(ss_file) as fh:
       session_string = fh.read().strip()
     return OneProxy(
-      self.config['zones-all'][zone],
+      self.config['zone-all'][zone],
       session_string,
       self.verifyOneCerts())
 
@@ -31,7 +31,7 @@ class Config:
     :param zone:
     :return:
     """
-    return self.config['zones-all'][zone]
+    return self.config['zone-all'][zone]
 
 
   def getMarketplaceUrl(self):
@@ -59,9 +59,9 @@ class Config:
 
   def getZones(self):
     """
-    Returns all the zones configured
+    Returns all the zone configured
     """
-    return self.config['zones-enabled']
+    return self.config['zone-enabled']
 
 
   def skipDatastore(self, datastore):

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} {{ vms|length }} virtual machines(s)</h2>
+    {% if vms|length > 0 %}
+        {% for vm in vms %}
+            <p>{{ vm.name }} {{ vm.id }}</p>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

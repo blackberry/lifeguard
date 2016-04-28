@@ -14,7 +14,7 @@ class GoldImageSync:
   def refresh(self, allowCached=False):
     if self.images is None or allowCached is False:
       self.images = self.one.getAllImages()
-    self.current_image = self.one.findInListByAttrKeyVal(
+    self.current_image = self.one.find_by_attr_k_v(
       self.images, 'name', self.imageNameForDatastore())
 
   def imageNameForDatastore(self):

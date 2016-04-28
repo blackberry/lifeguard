@@ -2,7 +2,7 @@ from ldap3 import LDAPException
 from flask import request, render_template, flash, redirect, url_for, Blueprint, g
 from flask.ext.login import current_user, login_user, logout_user, login_required
 from app import login_manager, db
-from app.auth.models import User, LoginForm
+from app.blueprints.auth.models import User, LoginForm
 
 auth = Blueprint('auth', __name__)
 

@@ -1,5 +1,5 @@
 from flask_wtf import Form
-from wtforms import StringField, PasswordField
+from wtforms import StringField, PasswordField, BooleanField
 from wtforms.validators import InputRequired
 from app import db
 
@@ -11,7 +11,7 @@ class Zone(db.Model):
   session_string = db.Column(db.String(100))
   zone_num = db.Column(db.Integer)
 
-  def __init__(self, name, xmlrpc_uri, session_string, zone_num):
+  def __init__(self, name=None, xmlrpc_uri=None, session_string=None, zone_num=None):
     self.name = name
     self.xmlrpc_uri = xmlrpc_uri
     self.session_string = session_string
@@ -24,5 +24,10 @@ class ZoneForm(Form):
   xmlrpc_uri = StringField('XML-RPC URI', [InputRequired()])
   session_string = PasswordField('Password', [InputRequired()])
 
-class ConfirmForm(Form):
+
+class BulkVmAddForm(Form):
+  vm_id = BooleanField('Name', [InputRequired()])
+
+
+class ConfirmDeleteForm(Form):
   pass

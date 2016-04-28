@@ -3,11 +3,11 @@
     <h2>Zones</h2>
     <p>On this page you can build your list of ONE zones where your server pools reside.  Specify the name, number and the URL to which the XML-RPC API is accessbile to manage your virtual servers.</p>
     {% if zones|length > 0 %}
-        <h4>There are {{zones|length}} ONE Zone(s) [<a href="/zones/create">New Zone</a>]</h4>
+        <h4>There are {{zones|length}} ONE Zone(s) [<a href="{{ url_for('zone_bp.manage') }}">New Zone</a>]</h4>
         {% for zone in zones %}
             {% include "zone_item.html" %}
         {% endfor %}
     {% else %}
-        <h4>There are no zones [<a href="/zones/create">New Zone</a>]</h4>
+        <h4>There are no zones [<a href="{{ url_for('zone_bp.manage') }}">New Zone</a>]</h4>
     {% endif %}
 {% endblock %}

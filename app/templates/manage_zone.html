@@ -1,0 +1,59 @@
+{% extends 'zones.html' %}
+{% block container %}
+    <h3>{{ form_title }}</h3>
+    <div class="top-pad">
+        <form
+                method="POST"
+                action="{{ url_for('zone_bp.manage', object_id=zone.id) }}"
+                role="form">
+            {{ form.csrf_token }}
+
+            <table>
+                <tr>
+                    <td>{{ form.name.label }}</td>
+                    <td>{{ form.name() }}</td>
+                    <td>
+                        {% for error in form.errors.name %}
+                            <span style="color: red;">{{error}}</span><br />
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>{{ form.zone_num.label }}</td>
+                    <td>{{ form.zone_num() }}</td>
+                    <td>
+                        {% for error in form.errors.zone_num %}
+                            <span style="color: red;">{{error}}</span><br />
+                        {% endfor %}
+                    </td>
+
+                </tr>
+                <tr>
+                    <td>{{ form.xmlrpc_uri.label }}</td>
+                    <td>{{ form.xmlrpc_uri() }}</td>
+                    <td>
+                        {% for error in form.errors.xmlrpc_uri %}
+                            <span style="color: red;">{{error}}</span><br />
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>{{ form.session_string.label }}</td>
+                    <td>{{ form.session_string() }}</td>
+                    <td>
+                        {% for error in form.errors.session_string %}
+                            <span style="color: red;">{{error}}</span><br />
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>&nbsp;</td>
+                    <td>
+                        <button type="submit" name="action" value="save" class="btn btn-default">Save</button>
+                        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+{% endblock %}

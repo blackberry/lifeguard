@@ -16,7 +16,7 @@ import ssl
 
 CURRENT_USER = -3
 UNLIMITED = -1
-
+EXCEPT_DONE = -1
 
 class OneProxy:
   def __init__(self, api_url, session_string, verify_certs = True):
@@ -33,7 +33,7 @@ class OneProxy:
 
     self.proxy = xmlrpc.client.ServerProxy(api_url, verbose=False, context=ssl_context)
 
-  def renameImage(self, id, new_name):
+  def rename_image(self, id, new_name):
     """
     Renames an image in a given zone
     :param id:
@@ -49,7 +49,7 @@ class OneProxy:
         response[1])))
 
 
-  def getImage(self, id):
+  def get_image(self, id):
     """
     Returns an image in a given zone
     :param id:
@@ -69,13 +69,13 @@ class OneProxy:
     }
 
 
-  def findInListByAttrKeyVal(self, list, attr_name, attr_val):
+  def find_by_attr_k_v(self, list, attr_name, attr_val):
     for item in list:
       if item[attr_name] == attr_val:
         return item
 
 
-  def getAllImages(self):
+  def get_all_images(self):
     """
     Retuns all the images in a given zone
     :return:
@@ -97,7 +97,7 @@ class OneProxy:
     return items
 
 
-  def getAllDatastores(self):
+  def get_all_datastores(self):
     """
     Returns all the datastores in a given zone
     :return:
@@ -118,7 +118,27 @@ class OneProxy:
     return items
 
 
-  def getAllClusters(self):
+  def get_vms(self):
+    """
+    Returns all VMs in a given zone
+    :return:
+    """
+    response = self.proxy.one.vmpool.info(self.session_string, CURRENT_USER, UNLIMITED, UNLIMITED, EXCEPT_DONE)
+    if response[0] is not True:
+      raise (Exception("one.vmpool.info failed (error code: {}) {}".format(
+        response[2],
+        response[1])))
+    items = []
+    print(response)
+    for child in etree.fromstring(response[1]):
+      items.append({
+        'id': int(child.find('ID').text),
+        'name': child.find('NAME').text
+      })
+    return items
+
+
+  def get_clusters(self):
     """
     Returns all the datastores in a given zone
     :return:
@@ -137,7 +157,7 @@ class OneProxy:
     return items
 
 
-  def createImage(self, datastore, template):
+  def create_image(self, datastore, template):
     """
     Createa an image defined by template in a given zone
     :param datastore:
