@@ -1,5 +1,5 @@
 from flask_wtf import Form
-from wtforms import StringField, PasswordField, BooleanField
+from wtforms import widgets, StringField, PasswordField, BooleanField, FieldList, SelectMultipleField
 from wtforms.validators import InputRequired
 from app import db
 
@@ -25,9 +25,5 @@ class ZoneForm(Form):
   session_string = PasswordField('Password', [InputRequired()])
 
 
-class BulkVmAddForm(Form):
-  vm_id = BooleanField('Name', [InputRequired()])
-
-
-class ConfirmDeleteForm(Form):
+class VmActionForm(Form):
   pass

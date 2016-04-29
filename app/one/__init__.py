@@ -1,6 +1,7 @@
 import xmlrpc.client
 import xml.etree.ElementTree as etree
 import ssl
+from app.one.VirtualMachine import VirtualMachine
 
 # http://docs.opennebula.org/4.10/integration/system_interfaces/api.html
 
@@ -129,12 +130,9 @@ class OneProxy:
         response[2],
         response[1])))
     items = []
-    print(response)
     for child in etree.fromstring(response[1]):
-      items.append({
-        'id': int(child.find('ID').text),
-        'name': child.find('NAME').text
-      })
+      items.append(VirtualMachine.from_xml_etree(child))
+    items.sort(key=lambda x: x.name)
     return items
 
 

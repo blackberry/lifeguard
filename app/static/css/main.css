@@ -3,3 +3,11 @@ body {
     margin: 0;
     padding-top: 50px;
 }
+
+.data-cell {
+    padding-right: 10px;
+}
+
+.r {
+    text-align: right;
+}

@@ -1,6 +1,6 @@
 from flask import request, render_template, flash, redirect, url_for, Blueprint, g
 from flask.ext.login import current_user, login_required
-from app.blueprints.zone.models import Zone, ZoneForm, ConfirmDeleteForm
+from app.blueprints.zone.models import Zone, ZoneForm, VmActionForm
 from app import db
 from app.one import OneProxy
 
@@ -16,7 +16,7 @@ def get_current_user():
 @login_required
 def list():
   zones = Zone.query.order_by(Zone.id.desc()).all()
-  return render_template('zones.html', zones=zones)
+  return render_template('zones_list.html', zones=zones)
 
 
 @zone_bp.route('/zone/<int:zone_id>', methods=['GET', 'POST'])
@@ -25,7 +25,10 @@ def view(zone_id):
   zone = Zone.query.get(zone_id)
   one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
   vms = one_proxy.get_vms()
-  return render_template('zone.html', zone=zone, vms=vms)
+  form = VmActionForm()
+  if form.validate_on_submit():
+    flash(request.form['action'], category='info')
+  return render_template('zone.html', form=form, zone=zone, vms=vms)
 
 
 @zone_bp.route('/zone/edit/<int:object_id>', methods=['GET', 'POST'])
