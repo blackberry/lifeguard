@@ -8,10 +8,12 @@
     {{ form.csrf_token }}
     <button type="submit" class="btn btn-default" name="action" value="sub">Submit</button>
     <br />
-    <div><input id="vm_name_filter" class="vm-name-filter"/> Filter
-    </div>
+    <div><input id="vm_name_filter" type="text"/> Filter</div>
     <script>
-        $("#vm_name_filter").on("change paste keyup keydown", row_filter('vm_name_filter', 'vm_list', 'filterable'));
+        $("#vm_name_filter").keyup(function() {
+            row_filter('vm_name_filter', 'vm_list', 'filterable');
+            //console.log("Handler for .keypress() called.");
+        });
     </script>
     <br />
     <table id="vm_list">
