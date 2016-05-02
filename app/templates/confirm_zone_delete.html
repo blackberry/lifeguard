@@ -2,7 +2,7 @@
 {% block container %}
     <form
             method="POST"
-            action="{{ url_for('zone_bp.delete', object_id=zone.id) }}"
+            action="{{ url_for('zone_bp.delete', number=zone.number) }}"
             role="form">
         {{ form.csrf_token }}
         <h3>Please confirm...</h3>

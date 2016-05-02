@@ -4,7 +4,7 @@
     <div class="top-pad">
         <form
                 method="POST"
-                action="{{ url_for('zone_bp.manage', object_id=zone.id) }}"
+                action="{{ url_for('zone_bp.manage', number=zone.number) }}"
                 role="form">
             {{ form.csrf_token }}
 
@@ -19,8 +19,8 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{{ form.zone_num.label }}</td>
-                    <td>{{ form.zone_num() }}</td>
+                    <td>{{ form.number.label }}</td>
+                    <td>{{ form.number() }}</td>
                     <td>
                         {% for error in form.errors.zone_num %}
                             <span style="color: red;">{{error}}</span><br />

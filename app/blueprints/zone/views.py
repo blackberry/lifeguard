@@ -15,30 +15,34 @@ def get_current_user():
 @zone_bp.route('/zone/list')
 @login_required
 def list():
-  zones = Zone.query.order_by(Zone.id.desc()).all()
+  zones = Zone.query.order_by(Zone.number.desc()).all()
   return render_template('zones_list.html', zones=zones)
 
 
-@zone_bp.route('/zone/<int:zone_id>', methods=['GET', 'POST'])
+@zone_bp.route('/zone/<int:number>', methods=['GET', 'POST'])
 @login_required
-def view(zone_id):
-  zone = Zone.query.get(zone_id)
-  one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-  vms = one_proxy.get_vms()
+def view(number):
+  vms = []
+  try:
+    zone = Zone.query.get(number)
+    one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
+    vms = one_proxy.get_vms()
+  except Exception as e:
+    flash("Error fetching VMs in zone number {}: {}".format(number, e), category='danger')
   form = VmActionForm()
   if form.validate_on_submit():
     flash(request.form['action'], category='info')
   return render_template('zone.html', form=form, zone=zone, vms=vms)
 
 
-@zone_bp.route('/zone/edit/<int:object_id>', methods=['GET', 'POST'])
-@zone_bp.route('/zone/create', methods=['GET', 'POST'], defaults={'object_id': None})
+@zone_bp.route('/zone/edit/<int:number>', methods=['GET', 'POST'])
+@zone_bp.route('/zone/create', methods=['GET', 'POST'], defaults={'number': None})
 @login_required
-def manage(object_id):
+def manage(number):
   zone = Zone()
   form_title = "Create New Zone"
-  if object_id is not None:
-    zone = Zone.query.get(object_id)
+  if number is not None:
+    zone = db.session.query(Zone).filter_by(number=number).first()
     form_title = 'Edit {}'.format(zone.name)
   form = ZoneForm(request.form, obj=zone)
   if request.method == 'POST':
@@ -61,11 +65,11 @@ def manage(object_id):
   return render_template('manage_zone.html', form_title=form_title, form=form, zone=zone)
 
 
-@zone_bp.route('/zone/delete/<int:object_id>', methods=['GET', 'POST'])
+@zone_bp.route('/zone/delete/<int:number>', methods=['GET', 'POST'])
 @login_required
-def delete(object_id):
-  zone = Zone.query.get(object_id)
-  form = ConfirmDeleteForm(request.form, zone=zone)
+def delete(number):
+  zone = Zone.query.get(number=number)
+  form = VmActionForm(request.form, zone=zone)
   if request.method == 'POST' and form.validate():
     try:
       if request.form['action'] == 'Cancel':
