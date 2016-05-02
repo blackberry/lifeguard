@@ -36,9 +36,27 @@ function counter_refresh(checkbox, counter_id_selected) {
     }
 }
 
-function tbl_toggle_checkboxes(master_checkbox, table_id) {
+function tbl_toggle_checkboxes(master_checkbox,
+                               table_id,
+                               counted_chk_class,
+                               counter_id_selected) {
+    var selected_span = $("#" + counter_id_selected);
+    num_selected = parseInt(selected_span.html());
     $( "#" + table_id).find('tr').each(function (row_num, tr) {
-        if (row_num == 0) return true;
         var row = $(this);
+        if (row.is(":visible")) {
+            row.find('input.'+counted_chk_class+'[type="checkbox"]').each(function (chk_num, cb) {
+                var jqueryCb = $(this);
+                if (master_checkbox.checked != jqueryCb.is(":checked")) {
+                    if (jqueryCb.is(":checked")) {
+                        num_selected--;
+                    } else {
+                        num_selected++;
+                    }
+                    jqueryCb.prop("checked", master_checkbox.checked);
+                }
+            });
+        }
     });
+    selected_span.html(num_selected);
 }
