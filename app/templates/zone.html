@@ -7,13 +7,12 @@
             role="form">
         {{ form.csrf_token }}
         {% if vms|length > 0 %}
-            <button type="submit" class="btn btn-default" name="action" value="sub">Submit</button>
             <br/>
             <div>
-                <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
+                Filter: <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
                 'vm_list',
                 'filterable',
-                'counted',
+                'counted',  
                 'count_filtered_vms',
                 'count_selected_filtered_vms')"/>
             </div>
@@ -25,6 +24,18 @@
                 Selected Filtered: <span id="count_selected_filtered_vms" class="badge">0</span>
             </div>
             <br/>
+
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"><a href="#">New Pool</a></li>
+                <li role="presentation"><a href="#">Existing Pools</a></li>
+            </ul>
+            <br />
+
+            <input type="text" name="new_pool_name"><button type="submit" class="btn btn-link">New Pool</button>
+
+            <!--<button type="submit" class="btn btn-default" name="action" value="sub">New Pool</button>-->
+            <br/>
+
             <table id="vm_list">
                 <tr class="rom_row">
                     <th class="data-cell">
@@ -36,6 +47,7 @@
                     </th>
                     <th class="data-cell">ID</th>
                     <th class="data-cell">Name</th>
+                    <th class="data-cell">Cluster</th>
                     <th class="data-cell">State</th>
                     <th class="data-cell">CPU</th>
                     <th class="data-cell">MEM</th>
@@ -44,11 +56,13 @@
                 {% for vm in vms %}
                     <tr id="row_vm_id_{{ vm.id }}">
                         <td>
-                            <input type="checkbox" class="counted" id="chk_vm_id_{{ vm.id }}"
+                            <input name="chk_vm_id" type="checkbox" value="{{ vm.id }}" class="counted"
+                                   id="chk_vm_id_{{ vm.id }}"
                                    onclick="counter_refresh(this, 'count_selected_vms')"/>
                         </td>
                         <td class="data-cell">{{ vm.id }}</td>
                         <td id="vm_id_{{ vm.id }}" class="data-cell filterable">{{ vm.name }}</td>
+                        <td class="data-cell">{{ vm.disk_cluster.name }}</td>
                         <td class="data-cell">{{ vm.state_desc() }}</td>
                         <td class="data-cell">{{ vm.cpu }}</td>
                         <td class="data-cell">{{ vm.memory_gb() }}</td>
@@ -57,6 +71,5 @@
                 {% endfor %}
             </table>
         {% endif %}
-
     </form>
 {% endblock %}

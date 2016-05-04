@@ -2,6 +2,7 @@ import xmlrpc.client
 import xml.etree.ElementTree as etree
 import ssl
 from app.one.VirtualMachine import VirtualMachine
+from app.one.Cluster import Cluster
 
 # http://docs.opennebula.org/4.10/integration/system_interfaces/api.html
 
@@ -130,8 +131,16 @@ class OneProxy:
         response[2],
         response[1])))
     items = []
+    clusters = self.get_clusters()
+    cluster_id_to_name = {}
+    for cluster in clusters:
+      cluster_id_to_name[cluster.id] = cluster
+      print('cluster {}={}'.format(cluster.id, cluster.name))
+
     for child in etree.fromstring(response[1]):
-      items.append(VirtualMachine.from_xml_etree(child))
+      vm = VirtualMachine.from_xml_etree(child)
+      vm.disk_cluster = cluster_id_to_name[vm.disk_cluster_id]
+      items.append(vm)
     items.sort(key=lambda x: x.name)
     return items
 
@@ -148,10 +157,8 @@ class OneProxy:
         response[1])))
     items = []
     for child in etree.fromstring(response[1]):
-      items.append({
-        'id': int(child.find('ID').text),
-        'name': child.find('NAME').text
-      })
+      items.append(Cluster.from_xml_etree(child))
+    items.sort(key=lambda x: x.name)
     return items
 
 

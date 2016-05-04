@@ -8,6 +8,7 @@ class VirtualMachine():
                memory=None,
                cpu=None,
                vcpu=None,
+               disk_cluster=None,
                disk_cluster_id=None,
                disk_datastore_id=None,
                disk_datastore_name = None,
@@ -22,6 +23,7 @@ class VirtualMachine():
     self.memory = memory
     self.cpu = cpu
     self.vcpu = vcpu
+    self.disk_cluster = disk_cluster
     self.disk_cluster_id = disk_cluster_id
     self.disk_datastore_id = disk_datastore_id
     self.disk_datastore_name = disk_datastore_name

@@ -31,7 +31,10 @@ def view(number):
     flash("Error fetching VMs in zone number {}: {}".format(number, e), category='danger')
   form = VmActionForm()
   if form.validate_on_submit():
-    flash(request.form['action'], category='info')
+    vm_ids = request.form.getlist('chk_vm_id')
+    flash(vm_ids, category='info')
+
+    print("here's the request form: ", request.form)
   return render_template('zone.html', form=form, zone=zone, vms=vms)
 
 
