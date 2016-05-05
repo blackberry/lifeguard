@@ -60,3 +60,38 @@ function tbl_toggle_checkboxes(master_checkbox,
     });
     selected_span.html(num_selected);
 }
+
+function select_tab(active_tab, tab_list) {
+    $('#' + active_tab + "_tab").addClass("active");
+    $('#' + active_tab + "_div").removeClass("hidden");
+    for(var tab_no in tab_list) {
+        if (tab_list[tab_no] != active_tab) {
+            console.log("hiding tab: " + tab_list[tab_no]);
+            $('#' + tab_list[tab_no]+"_div").addClass("hidden");
+            $('#' + tab_list[tab_no]+"_tab").removeClass("active");
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

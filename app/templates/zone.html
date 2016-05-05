@@ -7,35 +7,53 @@
             role="form">
         {{ form.csrf_token }}
         {% if vms|length > 0 %}
-            <br/>
-            <div>
+            <script>
+                var vm_tabs = ["create_new_pool", "add_to_existing_pool", "filter_vm_list"];
+            </script>
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" class="active"
+                    id="create_new_pool_tab" onclick="select_tab('create_new_pool', vm_tabs)">
+                    <a href="#">Create New Pool</a>
+                </li>
+                <li role="presentation"
+                    id="add_to_existing_pool_tab" onclick="select_tab('add_to_existing_pool', vm_tabs)">
+                    <a href="#">Add to Existing Pool</a>
+                </li>
+                <li role="presentation"
+                    id="filter_vm_list_tab" onclick="select_tab('filter_vm_list', vm_tabs)">
+                    <a href="#">Filter</a>
+                </li>
+            </ul>
+            <div class="tabbed-pane" id="create_new_pool_div">
+                <p>Select orphaned VMs from the list below and specify the new pool you'd like to group them within.</p>
+                <input type="text" name="new_pool_name" />
+                <button name="action" type="submit" value="New Pool" class="btn btn-sm btn-info">New Pool</button>
+            </div>
+            <div class="tabbed-pane hidden" id="add_to_existing_pool_div">
+                <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs to.</p>
+                <input type="text" name="new_pool_name"><button type="submit" class="btn btn-sm btn-info">New Pool</button>
+            </div>
+            <div class="tabbed-pane  hidden" id="filter_vm_list_div">
+                <p>
+                    Enter some keywords to filter the list of VMs below:<br />
+                    <br />
+                    Note: only the hostname matches the search criteria.  Please note that if it's entirely possible to have selected VMs that are filtered (i.e. hidden) so be careful when you are performing an action if there are filtered selected VMs...
+                </p>
                 Filter: <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
                 'vm_list',
                 'filterable',
-                'counted',  
+                'counted',
                 'count_filtered_vms',
                 'count_selected_filtered_vms')"/>
             </div>
-            <br/>
+            <br />
             <div>
                 Total: <span class="badge">{{ vms|length }}</span>
                 Filtered: <span id="count_filtered_vms" class="badge">0</span>
-                Selected: <span id="count_selected_vms" class="badge">0</span>
+                Selected: <span id="count_selected_vms" class="badge">{{ selected_vm_ids|length }}</span>
                 Selected Filtered: <span id="count_selected_filtered_vms" class="badge">0</span>
             </div>
             <br/>
-
-            <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active"><a href="#">New Pool</a></li>
-                <li role="presentation"><a href="#">Existing Pools</a></li>
-            </ul>
-            <br />
-
-            <input type="text" name="new_pool_name"><button type="submit" class="btn btn-link">New Pool</button>
-
-            <!--<button type="submit" class="btn btn-default" name="action" value="sub">New Pool</button>-->
-            <br/>
-
             <table id="vm_list">
                 <tr class="rom_row">
                     <th class="data-cell">
@@ -57,6 +75,7 @@
                     <tr id="row_vm_id_{{ vm.id }}">
                         <td>
                             <input name="chk_vm_id" type="checkbox" value="{{ vm.id }}" class="counted"
+                                   {%  if vm.id  in selected_vm_ids %} checked {% endif %}
                                    id="chk_vm_id_{{ vm.id }}"
                                    onclick="counter_refresh(this, 'count_selected_vms')"/>
                         </td>

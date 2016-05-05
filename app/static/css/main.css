@@ -11,3 +11,10 @@ body {
 .r {
     text-align: right;
 }
+
+.tabbed-pane {
+    border: #ddd solid 1px;
+    border-top: none;
+    padding: 15px;
+
+}

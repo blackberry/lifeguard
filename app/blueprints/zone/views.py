@@ -1,6 +1,6 @@
 from flask import request, render_template, flash, redirect, url_for, Blueprint, g
 from flask.ext.login import current_user, login_required
-from app.blueprints.zone.models import Zone, ZoneForm, VmActionForm
+from app.blueprints.zone.models import Zone, ZoneForm, VmActionForm, PoolMembership, VirtualMachinePool
 from app import db
 from app.one import OneProxy
 
@@ -23,19 +23,48 @@ def list():
 @login_required
 def view(number):
   vms = []
+  id_to_vm = {}
+  selected_vm_ids = {}
+  zone = None
   try:
     zone = Zone.query.get(number)
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-    vms = one_proxy.get_vms()
+    for vm in one_proxy.get_vms():
+      vms.append(vm)
+      id_to_vm[vm.id] = vm
   except Exception as e:
     flash("Error fetching VMs in zone number {}: {}".format(number, e), category='danger')
   form = VmActionForm()
   if form.validate_on_submit():
-    vm_ids = request.form.getlist('chk_vm_id')
-    flash(vm_ids, category='info')
+    selected_clusters = {}
+    for id in request.form.getlist('chk_vm_id'):
+      selected_vm_ids[int(id)] = id
+      selected_clusters[id_to_vm[int(id)].disk_cluster.id] = True
+    proceed = True
+    if len(selected_vm_ids) == 0:
+      flash("No virtual machines were selected!", category='danger')
+      proceed = False
+    elif len(selected_clusters.keys()) != 1:
+      flash("Selected VMs must all be in the same cluster", category='danger')
+      proceed = False
+    if proceed and request.form['action'] == 'New Pool':
+      try:
+        pool = VirtualMachinePool(name=request.form['new_pool_name'],
+                                  zone_number=zone.number,
+                                  cluster_id=next(iter(selected_clusters.keys())))
+        db.session.add(pool)
+        db.session.commit()
+        flash('Successfully created new pool: {}'.format(request.form['new_pool_name']), category='success')
+      except Exception as e:
+        db.session.rollback()
+        flash('Error creating your new pool: {}'.format(e), category='danger')
 
-    print("here's the request form: ", request.form)
-  return render_template('zone.html', form=form, zone=zone, vms=vms)
+
+  return render_template('zone.html',
+                         form=form,
+                         zone=zone,
+                         vms=vms,
+                         selected_vm_ids=selected_vm_ids)
 
 
 @zone_bp.route('/zone/edit/<int:number>', methods=['GET', 'POST'])
