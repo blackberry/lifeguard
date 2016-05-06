@@ -11,12 +11,17 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
-from app.blueprints.auth.views import auth
-from app.blueprints.zone.views import zone_bp
-#from app.blueprints.vm.views import vm_bp
+from app.views.auth import auth_bp
+app.register_blueprint(auth_bp)
 
+from app.views.virtual_pools import vpool_bp
+app.register_blueprint(vpool_bp)
+
+from app.views.zone import zone_bp
 app.register_blueprint(zone_bp)
-app.register_blueprint(auth)
-#app.register_blueprint(vm_bp)
+
+from app.views.zone.orphaned_vms import orphaned_vms_bp
+app.register_blueprint(orphaned_vms_bp)
+
 
 db.create_all()

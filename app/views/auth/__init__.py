@@ -1,10 +1,11 @@
 from ldap3 import LDAPException
 from flask import request, render_template, flash, redirect, url_for, Blueprint, g
 from flask.ext.login import current_user, login_user, logout_user, login_required
-from app import login_manager, db
-from app.blueprints.auth.models import User, LoginForm
+from app import db
+from app import login_manager
+from app.views.auth.models import User, LoginForm
 
-auth = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, template_folder='templates')
 
 
 @login_manager.user_loader
@@ -12,18 +13,18 @@ def load_user(id):
   return User.query.get(int(id))
 
 
-@auth.before_request
+@auth_bp.before_request
 def get_current_user():
   g.user = current_user
 
 
-@auth.route('/')
-@auth.route('/auth')
+@auth_bp.route('/')
+@auth_bp.route('/auth')
 def home():
   return render_template('auth.html')
 
 
-@auth.route('/login', methods=['GET', 'POST'])
+@auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
   if current_user.is_authenticated:
     flash('You are already logged in.')
@@ -59,7 +60,7 @@ def login():
   return render_template('login.html', form=form)
 
 
-@auth.route('/logout')
+@auth_bp.route('/logout')
 @login_required
 def logout():
   logout_user()
