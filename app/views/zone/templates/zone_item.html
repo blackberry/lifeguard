@@ -1,6 +1,7 @@
 <p>
     {{zone.name}} (#{{zone.number}}): {{zone.xmlrpc_uri}}
-        [<a href="/orphaned_vms/zone/{{ zone.number }}">vms</a>
+        [<a href="/orphaned_vms/zone/{{ zone.number }}">orhapned vms</a>
+        | <a href="/virtual_pools/list/zone/{{ zone.number }}">virtual server pools</a>
         | <a href="/zone/edit/{{ zone.number }}">edit</a>
         | <a href="/zone/delete/{{ zone.number }}">delete</a>]
 </p>

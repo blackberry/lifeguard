@@ -1,6 +1,5 @@
 from app import db
 
-
 class VirtualMachinePool(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(100), unique=True, nullable=False)
@@ -8,11 +7,21 @@ class VirtualMachinePool(db.Model):
   zone = db.relationship('Zone', backref=db.backref('zone', lazy='dynamic'))
   cluster_id = db.Column(db.Integer, nullable=False)
 
-  def __init__(self, id=None, name=None, zone_number=None, cluster_id=None):
+  def __init__(self, id=None, name=None, zone_number=None, zone=None, cluster_id=None):
     self.id = id
     self.name = name
     self.zone_number = zone_number
+    self.zone = zone
     self.cluster_id = cluster_id
+
+  def get_memberships(self):
+    return db.session.query(PoolMembership).join(
+      PoolMembership.pool, aliased=True).filter_by(id=self.id).all()
+
+  @staticmethod
+  def get_all(zone):
+    return db.session.query(VirtualMachinePool).join(
+      VirtualMachinePool.zone, aliased=True).filter_by(number=zone.number)
 
 
 class PoolMembership(db.Model):
@@ -26,3 +35,8 @@ class PoolMembership(db.Model):
     self.pool = pool
     self.vm_id = vm_id
     self.date_added = date_added
+
+  @staticmethod
+  def get_all(zone):
+    return db.session.query(PoolMembership).join(
+      PoolMembership.pool, aliased=True).filter_by(zone=zone)

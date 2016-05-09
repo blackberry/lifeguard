@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block container %}
-    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} {{ vms|length }} virtual machine(s)</h2>
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Orhpaned VMs</h2>
     <form
             method="POST"
             action="{{ url_for('orphaned_vms_bp.list', number=zone.number) }}"
@@ -26,18 +26,27 @@
             </ul>
             <div class="tabbed-pane" id="create_new_pool_div">
                 <p>Select orphaned VMs from the list below and specify the new pool you'd like to group them within.</p>
-                <input type="text" name="new_pool_name" />
+                <input type="text" name="new_pool_name"/>
                 <button name="action" type="submit" value="New Pool" class="btn btn-sm btn-info">New Pool</button>
             </div>
             <div class="tabbed-pane hidden" id="add_to_existing_pool_div">
-                <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs to.</p>
-                <input type="text" name="new_pool_name"><button type="submit" class="btn btn-sm btn-info">New Pool</button>
+                <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs
+                    to.</p>
+                <select name="pool_id">
+                    <option class="select_style" value="">Select pool...</option>
+                    {% for pool in pools %}
+                        <option value="{{ pool.id }}">{{ pool.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" name="action" value="add to pool" class="btn btn-sm btn-info">Add to Pool</button>
             </div>
             <div class="tabbed-pane  hidden" id="filter_vm_list_div">
                 <p>
-                    Enter some keywords to filter the list of VMs below:<br />
-                    <br />
-                    Note: only the hostname matches the search criteria.  Please note that if it's entirely possible to have selected VMs that are filtered (i.e. hidden) so be careful when you are performing an action if there are filtered selected VMs...
+                    Enter some keywords to filter the list of VMs below:<br/>
+                    <br/>
+                    Note: only the hostname matches the search criteria. Please note that if it's entirely possible to
+                    have selected VMs that are filtered (i.e. hidden) so be careful when you are performing an action if
+                    there are filtered selected VMs...
                 </p>
                 Filter: <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
                 'vm_list',
@@ -46,7 +55,10 @@
                 'count_filtered_vms',
                 'count_selected_filtered_vms')"/>
             </div>
-            <br />
+            <script>
+                select_tab('{{ active_tab_name }}', vm_tabs)
+            </script>
+            <br/>
             <div>
                 Total: <span class="badge">{{ vms|length }}</span>
                 Filtered: <span id="count_filtered_vms" class="badge">0</span>
@@ -72,27 +84,29 @@
                     <th class="data-cell">IP Address</th>
                 </tr>
                 {% for vm in vms %}
-                    <tr id="row_vm_id_{{ vm.id }}">
-                        <td>
-                            <input name="chk_vm_id" type="checkbox"
-                                   value="{{ vm.id }}"
-                                   id="chk_vm_id_{{ vm.id }}" class="counted"
-                                {%  if vm.id  in selected_vm_ids %} checked {% endif %}
-                                {%  if vm.id in memberships %}
-                                    onclick="return false"
-                                {% else %}
-                                    onclick="counter_refresh(this, 'count_selected_vms')"
-                                {% endif %}
-                            />
-                        </td>
-                        <td class="data-cell">{{ vm.id }}</td>
-                        <td id="vm_id_{{ vm.id }}" class="data-cell filterable">{{ vm.name }}</td>
-                        <td class="data-cell">{{ vm.disk_cluster.name }}</td>
-                        <td class="data-cell">{{ vm.state_desc() }}</td>
-                        <td class="data-cell">{{ vm.cpu }}</td>
-                        <td class="data-cell">{{ vm.memory_gb() }}</td>
-                        <td class="data-cell">{{ vm.ip_address }}</td>
-                    </tr>
+                    {% if vm.id not in memberships %}
+                        <tr id="row_vm_id_{{ vm.id }}">
+                            <td>
+                                <input name="chk_vm_id" type="checkbox"
+                                       value="{{ vm.id }}"
+                                       id="chk_vm_id_{{ vm.id }}" class="counted"
+                                        {% if vm.id  in selected_vm_ids %} checked {% endif %}
+                                        {% if vm.id in memberships %}
+                                       onclick="return false"
+                                        {% else %}
+                                       onclick="counter_refresh(this, 'count_selected_vms')"
+                                        {% endif %}
+                                        />
+                            </td>
+                            <td class="data-cell">{{ vm.id }}</td>
+                            <td id="vm_id_{{ vm.id }}" class="data-cell filterable">{{ vm.name }}</td>
+                            <td class="data-cell">{{ vm.disk_cluster.name }}</td>
+                            <td class="data-cell">{{ vm.state_desc() }}</td>
+                            <td class="data-cell">{{ vm.cpu }}</td>
+                            <td class="data-cell">{{ vm.memory_gb() }}</td>
+                            <td class="data-cell">{{ vm.ip_address }}</td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
             </table>
         {% endif %}

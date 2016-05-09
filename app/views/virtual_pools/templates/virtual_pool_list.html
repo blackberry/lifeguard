@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Virtual Server Pools</h2>
+    {% for pool in pools %}
+        <p>{{ pool.name }} {{ clusters[pool.cluster_id].name }} ({{ pool.get_memberships()|length }} VMs)</p>
+    {% endfor %}
+{% endblock %}
