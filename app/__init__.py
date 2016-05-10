@@ -20,8 +20,4 @@ app.register_blueprint(vpool_bp)
 from app.views.zone import zone_bp
 app.register_blueprint(zone_bp)
 
-from app.views.zone.orphaned_vms import orphaned_vms_bp
-app.register_blueprint(orphaned_vms_bp)
-
-
 db.create_all()

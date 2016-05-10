@@ -19,6 +19,7 @@ from app.one.Cluster import Cluster
 CURRENT_USER = -3
 UNLIMITED = -1
 EXCEPT_DONE = -1
+INCLUDING_DONE = -2
 
 class OneProxy:
   def __init__(self, api_url, session_string, verify_certs = True):
@@ -120,12 +121,15 @@ class OneProxy:
     return items
 
 
-  def get_vms(self):
+  def get_vms(self, include_done=False):
     """
     Returns all VMs in a given zone
     :return:
     """
-    response = self.proxy.one.vmpool.info(self.session_string, CURRENT_USER, UNLIMITED, UNLIMITED, EXCEPT_DONE)
+    state = EXCEPT_DONE
+    if include_done:
+      state = INCLUDING_DONE
+    response = self.proxy.one.vmpool.info(self.session_string, CURRENT_USER, UNLIMITED, UNLIMITED, state)
     if response[0] is not True:
       raise (Exception("one.vmpool.info failed (error code: {}) {}".format(
         response[2],
@@ -135,11 +139,10 @@ class OneProxy:
     cluster_id_to_name = {}
     for cluster in clusters:
       cluster_id_to_name[cluster.id] = cluster
-      print('cluster {}={}'.format(cluster.id, cluster.name))
-
     for child in etree.fromstring(response[1]):
       vm = VirtualMachine.from_xml_etree(child)
-      vm.disk_cluster = cluster_id_to_name[vm.disk_cluster_id]
+      if vm.disk_cluster_id is not None:
+        vm.disk_cluster = cluster_id_to_name[vm.disk_cluster_id]
       items.append(vm)
     items.sort(key=lambda x: x.name)
     return items

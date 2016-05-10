@@ -91,13 +91,15 @@ class VirtualMachine():
       lcm_state=VirtualMachine.lcm_state_by_id(int(etree.find('LCM_STATE').text)),
       stime=int(etree.find('STIME').text),
       memory=int(etree.find('TEMPLATE').find('MEMORY').text),
-      cpu=float(etree.find('TEMPLATE').find('CPU').text),
-      disk_cluster_id=int(etree.find('TEMPLATE').find('DISK').find('CLUSTER_ID').text),
-      disk_datastore_id=int(etree.find('TEMPLATE').find('DISK').find('DATASTORE_ID').text),
-      disk_datastore_name=etree.find('TEMPLATE').find('DISK').find('DATASTORE').text,
-      image_name=etree.find('TEMPLATE').find('DISK').find('IMAGE').text,
-      image_id=int(etree.find('TEMPLATE').find('DISK').find('IMAGE_ID').text),
-      ip_address=etree.find('TEMPLATE').find('NIC').find('IP').text)
+      cpu=float(etree.find('TEMPLATE').find('CPU').text))
+    if etree.find('TEMPLATE').find('DISK') is not None:
+      vm.disk_cluster_id=int(etree.find('TEMPLATE').find('DISK').find('CLUSTER_ID').text)
+      vm.disk_datastore_id=int(etree.find('TEMPLATE').find('DISK').find('DATASTORE_ID').text)
+      vm.disk_datastore_name=etree.find('TEMPLATE').find('DISK').find('DATASTORE').text
+      vm.image_name=etree.find('TEMPLATE').find('DISK').find('IMAGE').text
+      vm.image_id=int(etree.find('TEMPLATE').find('DISK').find('IMAGE_ID').text)
+    if etree.find('TEMPLATE').find('NIC') is not None:
+      vm.ip_address = etree.find('TEMPLATE').find('NIC').find('IP').text
     if etree.find('TEMPLATE').find('VCPU') is not None:
       vm.vcpu = float(etree.find('TEMPLATE').find('VCPU').text)
     return vm

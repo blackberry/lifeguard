@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block container %}
+<h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / <a href="{{ url_for('vpool_bp.list', number=pool.zone.number)    }}">{{ pool.zone.name }}</a> / {{ pool.name }}</h2>
+<br/>
+{% if pool.get_memberships()|length > 0 %}
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}"
+            role="form">
+    <table id="vm_list">
+        <tr class="rom_row">
+            <th class="data-cell">
+                <input type="checkbox" id="vm_all" onclick="tbl_toggle_checkboxes(this,
+                        'vm_list',
+                        'counted',
+                        'count_selected_vms')"/>
+                <label for="vm_all"></label>
+            </th>
+            <th class="data-cell">ID</th>
+            <th class="data-cell">Name</th>
+            <th class="data-cell">Cluster</th>
+            <th class="data-cell">State</th>
+            <th class="data-cell">CPU</th>
+            <th class="data-cell">MEM</th>
+            <th class="data-cell">IP Address</th>
+        </tr>
+        {% for membership in pool.get_memberships() %}
+            <tr id="row_vm_id_{{ membership.vm_id }}">
+                <td>
+                    <input class="counted" name="chk_vm_id" type="checkbox"
+                           value="{{ membership.vm_id }}" id="chk_vm_id_{{ membership.vm_id }}">
+                </td>
+                {% if membership.vm_id in vms_by_id %}
+                    <td class="data-cell">{{ membership.vm_id }}</td>
+                    <td id="vm_id_{{ membership.vm_id }}" class="data-cell filterable">{{ vms_by_id[membership.vm_id].name }}</td>
+                    <td class="data-cell">{{ vms_by_id[membership.vm_id].disk_cluster.name }}</td>
+                    <td class="data-cell">{{ vms_by_id[membership.vm_id].state_desc() }}</td>
+                    <td class="data-cell">{{ vms_by_id[membership.vm_id].cpu }}</td>
+                    <td class="data-cell">{{ vms_by_id[membership.vm_id].memory_gb() }}</td>
+                    <td class="data-cell">{{ vms_by_id[membership.vm_id].ip_address }}</td>
+                {% else %}
+                    <td colspan="7">WARNING: VM ID {{ membership.vm_id }} not found in {{ pool.zone.name }}!</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <p>This virtual pool does not contain any VMs!</p>
+    <br/>
+    <p>You can add VMs in {{ zone.name }}
+        <a href="{{ url_for('vpool_bp.list_orphans', number=zone.number) }}">here</a></p>
+{% endif %}
+{% endblock %}

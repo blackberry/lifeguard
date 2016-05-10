@@ -3,7 +3,7 @@
     <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Orhpaned VMs</h2>
     <form
             method="POST"
-            action="{{ url_for('orphaned_vms_bp.list', number=zone.number) }}"
+            action="{{ url_for('vpool_bp.list_orphans', number=zone.number) }}"
             role="form">
         {{ form.csrf_token }}
         {% if vms|length > 0 %}
@@ -27,7 +27,7 @@
             <div class="tabbed-pane" id="create_new_pool_div">
                 <p>Select orphaned VMs from the list below and specify the new pool you'd like to group them within.</p>
                 <input type="text" name="new_pool_name"/>
-                <button name="action" type="submit" value="New Pool" class="btn btn-sm btn-info">New Pool</button>
+                <button name="action" type="submit" value="create new pool" class="btn btn-sm btn-info">New Pool</button>
             </div>
             <div class="tabbed-pane hidden" id="add_to_existing_pool_div">
                 <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs
