@@ -6,6 +6,7 @@ from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app import db
 from app.one import OneProxy
+from jinja2 import Environment
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
@@ -13,6 +14,30 @@ vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 @vpool_bp.before_request
 def get_current_user():
   g.user = current_user
+
+
+@vpool_bp.route('/test_vm_create/zone/<int:number>', methods=['GET'])
+@login_required
+def vm_create(number):
+  hostname = None
+  cpu = None
+  image = None
+  memory_megabytes = None
+  vcpu = None
+  vm_template = None
+  try:
+    hostname = request.args.get('hostname')
+    cpu = request.args.get('cpu')
+    image = request.args.get('image')
+    memory_megabytes = request.args.get('memory_megabytes')
+    vcpu = request.args.get('vcpu')
+    zone = Zone.query.get(number)
+    one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
+    vm_template = Environment().from_string("this is my hostname: {{ hostname }}").render(hostname=hostname, var2="dave")
+  except Exception as e:
+    flash("Error parsing GET parameters: {}".format(e))
+  return render_template('vm_create.html',
+                         vm_template=vm_template)
 
 
 @vpool_bp.route('/virtual_pools/view/<int:pool_id>', methods=['GET', 'POST'])
@@ -23,7 +48,6 @@ def view_pool(pool_id):
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    print("before one_proxy")
     one_proxy = OneProxy(pool.zone.xmlrpc_uri, pool.zone.session_string, verify_certs=False)
     vms = one_proxy.get_vms(include_done=True)
     if vms is None or len(vms) == 0:
@@ -50,7 +74,7 @@ def list(number):
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
     for cluster in one_proxy.get_clusters():
       clusters[cluster.id] = cluster
-    pools = VirtualMachinePool.get_all(zone)
+    pools = VirtualMachinePool.get_all(zone).order_by(VirtualMachinePool.name)
     for membership in PoolMembership.get_all(zone):
       memberships[membership.vm_id] = membership
   except Exception as e:
@@ -134,12 +158,13 @@ def list_orphans(number):
         db.session.flush()
         for vm_id in selected_vm_ids.keys():
           membership = PoolMembership(pool=pool, vm_id=vm_id, date_added=datetime.utcnow())
+          memberships[vm_id] = membership
           db.session.add(membership)
         db.session.flush()
         db.session.commit()
-        flash('Successfully created <a href="">{}</a> with {} pool members'.format(
-          url_for('vpool_bp.list_orphans', number=zone.number),
-          pool.name, len(selected_vm_ids)), category='success')
+        flash(Markup('Successfully created <a href="{}">{}</a> with {} pool members'.format(
+          url_for('vpool_bp.view_pool', pool_id=pool.id),
+          pool.name, len(selected_vm_ids))), category='success')
       except Exception as e:
         db.session.rollback()
         flash('Error creating your new pool: {}'.format(e), category='danger')

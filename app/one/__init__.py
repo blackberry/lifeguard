@@ -21,8 +21,9 @@ UNLIMITED = -1
 EXCEPT_DONE = -1
 INCLUDING_DONE = -2
 
+
 class OneProxy:
-  def __init__(self, api_url, session_string, verify_certs = True):
+  def __init__(self, api_url, session_string, verify_certs=True):
     self.api_url = api_url
     self.session_string = session_string
     self.verify_certs = verify_certs
@@ -51,7 +52,6 @@ class OneProxy:
         response[2],
         response[1])))
 
-
   def get_image(self, id):
     """
     Returns an image in a given zone
@@ -71,12 +71,10 @@ class OneProxy:
       'description': xml.find('DESC').text
     }
 
-
   def find_by_attr_k_v(self, list, attr_name, attr_val):
     for item in list:
       if item[attr_name] == attr_val:
         return item
-
 
   def get_all_images(self):
     """
@@ -99,7 +97,6 @@ class OneProxy:
       })
     return items
 
-
   def get_all_datastores(self):
     """
     Returns all the datastores in a given zone
@@ -119,7 +116,6 @@ class OneProxy:
         'type': child.find('DS_MAD').text
       })
     return items
-
 
   def get_vms(self, include_done=False):
     """
@@ -147,7 +143,6 @@ class OneProxy:
     items.sort(key=lambda x: x.name)
     return items
 
-
   def get_clusters(self):
     """
     Returns all the datastores in a given zone
@@ -164,7 +159,6 @@ class OneProxy:
     items.sort(key=lambda x: x.name)
     return items
 
-
   def create_image(self, datastore, template):
     """
     Createa an image defined by template in a given zone
@@ -175,6 +169,24 @@ class OneProxy:
     response = self.proxy.one.image.allocate(self.session_string, template, datastore['id'])
     if response[0] is not True:
       raise (Exception("one.image.allocate failed (error code: {}) {} with template {}".format(
+        response[2],
+        response[1],
+        template)))
+
+  def create_vm(self, template, hold=False):
+    """
+    Create a virtual machine defined by the template
+    set hold=True to hold the VM after creation, hold=false to make it pending (launch)
+    :param template:
+    :param hold:
+    :raise (Exception("one.vm.allocate failed (error code: {}) {} with template {}".format(
+        response[2],
+        response[1],
+        template))):
+    """
+    response = self.proxy.one.vm.allocate(self.session_string, template, hold)
+    if response[0] is not True:
+      raise (Exception("one.vm.allocate failed (error code: {}) {} with template {}".format(
         response[2],
         response[1],
         template)))

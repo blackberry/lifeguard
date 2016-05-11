@@ -22,3 +22,14 @@ body {
 .select_style {
     width: 250px;
 }
+
+.form-label {
+    padding-right: 15px;
+    vertical-align: top;
+}
+
+.textarea_vars {
+    height: 500px;
+    width: 300px;
+    wrap-option: soft;
+}

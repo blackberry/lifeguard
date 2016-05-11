@@ -10,7 +10,7 @@
 
             <table>
                 <tr>
-                    <td>{{ form.name.label }}</td>
+                    <td class="form-label">{{ form.name.label }}</td>
                     <td>{{ form.name() }}</td>
                     <td>
                         {% for error in form.errors.name %}
@@ -19,7 +19,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{{ form.number.label }}</td>
+                    <td class="form-label">{{ form.number.label }}</td>
                     <td>{{ form.number() }}</td>
                     <td>
                         {% for error in form.errors.zone_num %}
@@ -29,7 +29,7 @@
 
                 </tr>
                 <tr>
-                    <td>{{ form.xmlrpc_uri.label }}</td>
+                    <td class="form-label">{{ form.xmlrpc_uri.label }}</td>
                     <td>{{ form.xmlrpc_uri() }}</td>
                     <td>
                         {% for error in form.errors.xmlrpc_uri %}
@@ -38,10 +38,20 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>{{ form.session_string.label }}</td>
+                    <td class="form-label">{{ form.session_string.label }}</td>
                     <td>{{ form.session_string() }}</td>
                     <td>
                         {% for error in form.errors.session_string %}
+                            <span style="color: red;">{{error}}</span><br />
+                        {% endfor %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="form-label">{{ form.vars.label }}</td>
+                    <td>{{ form.vars() }}</td>
+                    <td>
+                        {% for error in form.errors.vars %}
                             <span style="color: red;">{{error}}</span><br />
                         {% endfor %}
                     </td>

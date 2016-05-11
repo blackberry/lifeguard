@@ -21,7 +21,7 @@ def manage(number):
   form_title = "Create New Zone"
   if number is not None:
     zone = db.session.query(Zone).filter_by(number=number).first()
-    form_title = 'Edit {}'.format(zone.name)
+    form_title = 'Edit Zone: {}'.format(zone.name)
   form = ZoneForm(request.form, obj=zone)
   if request.method == 'POST':
     if request.form['action'] == "cancel":
