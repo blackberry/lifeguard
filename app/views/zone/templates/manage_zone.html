@@ -46,16 +46,6 @@
                         {% endfor %}
                     </td>
                 </tr>
-
-                <tr>
-                    <td class="form-label">{{ form.vars.label }}</td>
-                    <td>{{ form.vars() }}</td>
-                    <td>
-                        {% for error in form.errors.vars %}
-                            <span style="color: red;">{{error}}</span><br />
-                        {% endfor %}
-                    </td>
-                </tr>
                 <tr>
                     <td>&nbsp;</td>
                     <td>

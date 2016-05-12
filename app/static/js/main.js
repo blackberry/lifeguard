@@ -1,16 +1,3 @@
-/*
- Ensure that hitting enter doesn't submit forms automatically
- */
-$(document).ready(function () {
-    $(window).keydown(function (event) {
-        if (event.keyCode == 13) {
-            event.preventDefault();
-            return false;
-        }
-    });
-});
-
-
 function tbl_row_filter(input,
                         table_id,
                         filter_data_class,

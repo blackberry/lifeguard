@@ -1,12 +1,13 @@
-from datetime import datetime
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
-from app.views.virtual_pools.models import PoolMembership, VirtualMachinePool
+from app.views.virtual_pools.models import PoolMembership, VirtualMachinePool, CreateVmForm
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app import db
 from app.one import OneProxy
 from jinja2 import Environment
+from app.jira_api import JiraApi
+from datetime import datetime
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
@@ -16,27 +17,43 @@ def get_current_user():
   g.user = current_user
 
 
-@vpool_bp.route('/test_vm_create/zone/<int:number>', methods=['GET'])
+@vpool_bp.route('/test_vm_create/zone/<int:number>', methods=['GET', 'POST'])
 @login_required
 def vm_create(number):
-  hostname = None
-  cpu = None
-  image = None
-  memory_megabytes = None
-  vcpu = None
+  zone = Zone.query.get(number)
+  vars = {'hostname': None,
+          'cpu': None,
+          'vcpu': None,
+          'image_id': None,
+          'image_uname': None,
+          'memory_megabytes': None}
   vm_template = None
-  try:
-    hostname = request.args.get('hostname')
-    cpu = request.args.get('cpu')
-    image = request.args.get('image')
-    memory_megabytes = request.args.get('memory_megabytes')
-    vcpu = request.args.get('vcpu')
-    zone = Zone.query.get(number)
-    one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-    vm_template = Environment().from_string("this is my hostname: {{ hostname }}").render(hostname=hostname, var2="dave")
-  except Exception as e:
-    flash("Error parsing GET parameters: {}".format(e))
+  form = CreateVmForm(request.form)
+  if form.validate_on_submit():
+    if request.form['action'] == 'cancel':
+      redirect(url_for('zone_bp.list'))
+    try:
+      for k, v in vars.items():
+        if request.form[k] is None or request.form[k] == '':
+          raise Exception('expected parameter {} is {}'.format(k, v))
+        vars[k] = request.form[k]
+      one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
+      vm_template = Environment().from_string(zone.template).render(vars=vars)
+      jira_api = JiraApi()
+      jira_api.connect()
+      new_issue = jira_api.instance.create_issue(
+        project='IPGBD',
+        summary='[auto] VM instantiated: {}'.format(vars['hostname']),
+        description='Template: {}'.format(vm_template),
+        customfield_13842=jira_api.get_datetime_now(),
+        issuetype={'name': 'Task'})
+      one_proxy.create_vm(template=vm_template)
+      flash('Created VM: {}'.format(vars['hostname']))
+    except Exception as e:
+      flash("Error parsing GET parameters: {}".format(e), category='danger')
   return render_template('vm_create.html',
+                         form=form,
+                         zone=zone,
                          vm_template=vm_template)
 
 

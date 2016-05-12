@@ -9,7 +9,7 @@ class Zone(db.Model):
   name = db.Column(db.String(100), unique=True, nullable=False)
   xmlrpc_uri = db.Column(db.String(100), nullable=False)
   session_string = db.Column(db.String(100), nullable=False)
-  vars = db.Column(db.Text())
+  template = db.Column(db.Text())
 
   def __init__(self, number=None, name=None, xmlrpc_uri=None, session_string=None):
     self.name = name
@@ -23,4 +23,7 @@ class ZoneForm(Form):
   number = StringField('Number', [InputRequired()])
   xmlrpc_uri = StringField('XML-RPC URI', [InputRequired()])
   session_string = PasswordField('Session String', [InputRequired()])
-  vars = TextAreaField('Variables')
+
+
+class ZoneTemplateForm(Form):
+  template = TextAreaField('Zone Template')

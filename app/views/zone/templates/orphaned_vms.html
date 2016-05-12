@@ -1,114 +1,118 @@
 {% extends "base.html" %}
 {% block container %}
     <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Orhpaned VMs</h2>
-    <form
-            method="POST"
-            action="{{ url_for('vpool_bp.list_orphans', number=zone.number) }}"
-            role="form">
-        {{ form.csrf_token }}
-        {% if vms|length > 0 %}
-            <script>
-                var vm_tabs = ["create_new_pool", "add_to_existing_pool", "filter_vm_list"];
-            </script>
-            <ul class="nav nav-tabs" role="tablist">
-                <li role="presentation" class="active"
-                    id="create_new_pool_tab" onclick="select_tab('create_new_pool', vm_tabs)">
-                    <a href="#">Create New Pool</a>
-                </li>
-                <li role="presentation"
-                    id="add_to_existing_pool_tab" onclick="select_tab('add_to_existing_pool', vm_tabs)">
-                    <a href="#">Add to Existing Pool</a>
-                </li>
-                <li role="presentation"
-                    id="filter_vm_list_tab" onclick="select_tab('filter_vm_list', vm_tabs)">
-                    <a href="#">Filter</a>
-                </li>
-            </ul>
-            <div class="tabbed-pane" id="create_new_pool_div">
-                <p>Select orphaned VMs from the list below and specify the new pool you'd like to group them within.</p>
-                <input type="text" name="new_pool_name"/>
-                <button name="action" type="submit" value="create new pool" class="btn btn-sm btn-info">New Pool</button>
-            </div>
-            <div class="tabbed-pane hidden" id="add_to_existing_pool_div">
-                <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs
-                    to.</p>
-                <select name="pool_id">
-                    <option class="select_style" value="">Select pool...</option>
-                    {% for pool in pools %}
-                        <option value="{{ pool.id }}">{{ pool.name }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" name="action" value="add to pool" class="btn btn-sm btn-info">Add to Pool</button>
-            </div>
-            <div class="tabbed-pane  hidden" id="filter_vm_list_div">
-                <p>
-                    Enter some keywords to filter the list of VMs below:<br/>
-                    <br/>
-                    Note: only the hostname matches the search criteria. Please note that if it's entirely possible to
-                    have selected VMs that are filtered (i.e. hidden) so be careful when you are performing an action if
-                    there are filtered selected VMs...
-                </p>
-                Filter: <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
+    {% if vms|length > 0 %}
+        <script>
+            var vm_tabs = ["create_new_pool", "add_to_existing_pool", "filter_vm_list"];
+        </script>
+        <ul class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"
+                id="create_new_pool_tab" onclick="select_tab('create_new_pool', vm_tabs)">
+                <a href="#">Create New Pool</a>
+            </li>
+            <li role="presentation"
+                id="add_to_existing_pool_tab" onclick="select_tab('add_to_existing_pool', vm_tabs)">
+                <a href="#">Add to Existing Pool</a>
+            </li>
+            <li role="presentation"
+                id="filter_vm_list_tab" onclick="select_tab('filter_vm_list', vm_tabs)">
+                <a href="#">Filter</a>
+            </li>
+        </ul>
+        <!-- This goes outside the form tag to prevent submission if a user hits enter on the filter -->
+        <div class="tabbed-pane  hidden" id="filter_vm_list_div">
+            <p>
+                Enter some keywords to filter the list of VMs below:<br/>
+                <br/>
+                Note: only the hostname matches the search criteria. Please note that if it's entirely possible to
+                have selected VMs that are filtered (i.e. hidden) so be careful when you are performing an action if
+                there are filtered selected VMs...
+            </p>
+            Filter: <input id="vm_name_filter" type="text" onkeyup="tbl_row_filter(this,
                 'vm_list',
                 'filterable',
                 'counted',
                 'count_filtered_vms',
                 'count_selected_filtered_vms')"/>
-            </div>
-            <script>
-                select_tab('{{ active_tab_name }}', vm_tabs)
-            </script>
-            <br/>
-            <div>
-                Total: <span class="badge">{{ vms|length }}</span>
-                Filtered: <span id="count_filtered_vms" class="badge">0</span>
-                Selected: <span id="count_selected_vms" class="badge">{{ selected_vm_ids|length }}</span>
-                Selected Filtered: <span id="count_selected_filtered_vms" class="badge">0</span>
-            </div>
-            <br/>
-            <table id="vm_list">
-                <tr class="rom_row">
-                    <th class="data-cell">
-                        <input type="checkbox" id="vm_all" onclick="tbl_toggle_checkboxes(this,
+        </div>
+
+        <form
+                method="POST"
+                action="{{ url_for('vpool_bp.list_orphans', number=zone.number) }}"
+                role="form">
+        {{ form.csrf_token }}
+
+
+        <div class="tabbed-pane" id="create_new_pool_div">
+            <p>Select orphaned VMs from the list below and specify the new pool you'd like to group them within.</p>
+            <input type="text" name="new_pool_name"/>
+            <button name="action" type="submit" value="create new pool" class="btn btn-sm btn-info">New Pool</button>
+        </div>
+        <div class="tabbed-pane hidden" id="add_to_existing_pool_div">
+            <p>Select orphaned VMs from the list below and specify the existing pool you'd like to add the VMs
+                to.</p>
+            <select name="pool_id">
+                <option class="select_style" value="">Select pool...</option>
+                {% for pool in pools %}
+                    <option value="{{ pool.id }}">{{ pool.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" name="action" value="add to pool" class="btn btn-sm btn-info">Add to Pool</button>
+        </div>
+        <script>
+            select_tab('{{ active_tab_name }}', vm_tabs)
+        </script>
+        <br/>
+        <div>
+            Total: <span class="badge">{{ vms|length }}</span>
+            Filtered: <span id="count_filtered_vms" class="badge">0</span>
+            Selected: <span id="count_selected_vms" class="badge">{{ selected_vm_ids|length }}</span>
+            Selected Filtered: <span id="count_selected_filtered_vms" class="badge">0</span>
+        </div>
+        <br/>
+        <table id="vm_list">
+            <tr class="rom_row">
+                <th class="data-cell">
+                    <input type="checkbox" id="vm_all" onclick="tbl_toggle_checkboxes(this,
                         'vm_list',
                         'counted',
                         'count_selected_vms')"/>
-                        <label for="vm_all"></label>
-                    </th>
-                    <th class="data-cell">ID</th>
-                    <th class="data-cell">Name</th>
-                    <th class="data-cell">Cluster</th>
-                    <th class="data-cell">State</th>
-                    <th class="data-cell">CPU</th>
-                    <th class="data-cell">MEM</th>
-                    <th class="data-cell">IP Address</th>
-                </tr>
-                {% for vm in vms %}
-                    {% if vm.id not in memberships %}
-                        <tr id="row_vm_id_{{ vm.id }}">
-                            <td>
-                                <input name="chk_vm_id" type="checkbox"
-                                       value="{{ vm.id }}"
-                                       id="chk_vm_id_{{ vm.id }}" class="counted"
-                                        {% if vm.id  in selected_vm_ids %} checked {% endif %}
-                                        {% if vm.id in memberships %}
-                                       onclick="return false"
-                                        {% else %}
-                                       onclick="counter_refresh(this, 'count_selected_vms')"
-                                        {% endif %}
-                                        />
-                            </td>
-                            <td class="data-cell">{{ vm.id }}</td>
-                            <td id="vm_id_{{ vm.id }}" class="data-cell filterable">{{ vm.name }}</td>
-                            <td class="data-cell">{{ vm.disk_cluster.name }}</td>
-                            <td class="data-cell">{{ vm.state_desc() }}</td>
-                            <td class="data-cell">{{ vm.cpu }}</td>
-                            <td class="data-cell">{{ vm.memory_gb() }}</td>
-                            <td class="data-cell">{{ vm.ip_address }}</td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            </table>
-        {% endif %}
-    </form>
+                    <label for="vm_all"></label>
+                </th>
+                <th class="data-cell">ID</th>
+                <th class="data-cell">Name</th>
+                <th class="data-cell">Cluster</th>
+                <th class="data-cell">State</th>
+                <th class="data-cell">CPU</th>
+                <th class="data-cell">MEM</th>
+                <th class="data-cell">IP Address</th>
+            </tr>
+            {% for vm in vms %}
+                {% if vm.id not in memberships %}
+                    <tr id="row_vm_id_{{ vm.id }}">
+                        <td>
+                            <input name="chk_vm_id" type="checkbox"
+                                   value="{{ vm.id }}"
+                                   id="chk_vm_id_{{ vm.id }}" class="counted"
+                                    {% if vm.id  in selected_vm_ids %} checked {% endif %}
+                                    {% if vm.id in memberships %}
+                                   onclick="return false"
+                                    {% else %}
+                                   onclick="counter_refresh(this, 'count_selected_vms')"
+                                    {% endif %}
+                                    />
+                        </td>
+                        <td class="data-cell">{{ vm.id }}</td>
+                        <td id="vm_id_{{ vm.id }}" class="data-cell filterable">{{ vm.name }}</td>
+                        <td class="data-cell">{{ vm.disk_cluster.name }}</td>
+                        <td class="data-cell">{{ vm.state_desc() }}</td>
+                        <td class="data-cell">{{ vm.cpu }}</td>
+                        <td class="data-cell">{{ vm.memory_gb() }}</td>
+                        <td class="data-cell">{{ vm.ip_address }}</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </table>
+    {% endif %}
+</form>
 {% endblock %}

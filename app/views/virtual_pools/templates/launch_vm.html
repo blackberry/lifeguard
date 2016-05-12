@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / <a
+            href="{{ url_for('vpool_bp.vm_create', number=pool.zone.number) }}">{{ pool.zone.name }}</a> / {{ pool.name }}
+    </h2>
+    <br/>
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.vm_create', number=zone.number) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <h3>Launch a VM:</h3>
+        <table>
+            <tr>
+                <td class="form-label"><label for="vm_hostname">Hostname:</label></td>
+                <td><input type="text" name="hostname" id="vm_hostname"></td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.number.label }}</td>
+                <td>{{ form.number() }}</td>
+                <td>
+                    {% for error in form.errors.zone_num %}
+                        <span style="color: red;">{{error}}</span><br />
+                    {% endfor %}
+                </td>
+
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.xmlrpc_uri.label }}</td>
+                <td>{{ form.xmlrpc_uri() }}</td>
+                <td>
+                    {% for error in form.errors.xmlrpc_uri %}
+                        <span style="color: red;">{{error}}</span><br />
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.session_string.label }}</td>
+                <td>{{ form.session_string() }}</td>
+                <td>
+                    {% for error in form.errors.session_string %}
+                        <span style="color: red;">{{error}}</span><br />
+                    {% endfor %}
+                </td>
+            </tr>
+        </table>
+
+
+        <p><input type="submit" name="action" value="Cancel"> <input type="submit" name="action" value="Launch"></p>
+    </form>
+{% endblock %}

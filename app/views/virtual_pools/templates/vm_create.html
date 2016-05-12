@@ -1,8 +1,76 @@
 {% extends "base.html" %}
 {% block container %}
-    <h2>Your VM Template</h2>
-    <br />
-    <pre>
-    {{ vm_template }}
-    </pre>
+    <h2 xmlns="http://www.w3.org/1999/html"><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Create
+        VM</h2>
+    <br/>
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.vm_create', number=zone.number) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <h3>Create a VM:</h3>
+        <table>
+            <tr>
+                <td class="form-label">{{ form.hostname.label }}</td>
+                <td>{{ form.hostname() }}</td>
+                <td>
+                    {% for error in form.errors.hostname %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.cpu.label }}</td>
+                <td>{{ form.cpu() }}</td>
+                <td>
+                    {% for error in form.errors.cpu %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.vcpu.label }}</td>
+                <td>{{ form.vcpu() }}</td>
+                <td>
+                    {% for error in form.errors.vcpu %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.memory_megabytes.label }}</td>
+                <td>{{ form.memory_megabytes() }}</td>
+                <td>
+                    {% for error in form.errors.memory_megabytes %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.image_id.label }}</td>
+                <td>{{ form.image_id() }}</td>
+                <td>
+                    {% for error in form.errors.image_id %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">{{ form.image_uname.label }}</td>
+                <td>{{ form.image_uname() }}</td>
+                <td>
+                    {% for error in form.errors.image_uname %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td>
+                    <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+                    <button type="submit" name="action" value="create" class="btn btn-default">Create</button>
+                </td>
+            </tr>
+        </table>
+    </form>
 {% endblock %}

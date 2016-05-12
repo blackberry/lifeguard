@@ -1,6 +1,6 @@
 from flask import request, render_template, flash, redirect, url_for, Blueprint
 from flask.ext.login import login_required
-from app.views.zone.models import Zone, ZoneForm
+from app.views.zone.models import Zone, ZoneForm, ZoneTemplateForm
 from app.views.common.models import ActionForm
 from app import app, db
 
@@ -41,6 +41,30 @@ def manage(number):
   if form.errors:
     flash("Errors must be resolved before zone can be saved", 'danger')
   return render_template('manage_zone.html', form_title=form_title, form=form, zone=zone)
+
+@zone_bp.route('/zone/template/<int:number>', methods=['GET', 'POST'])
+@login_required
+def edit_template(number):
+  zone = db.session.query(Zone).filter_by(number=number).first()
+  form = ZoneTemplateForm(request.form, obj=zone)
+  if request.method == 'POST':
+    if request.form['action'] == "cancel":
+      flash('Cancelled {} template update'.format(zone.name), category="info")
+      return redirect(url_for('zone_bp.list'))
+    elif request.form['action'] == "save":
+      if form.validate():
+        try:
+          form.populate_obj(zone)
+          db.session.add(zone)
+          db.session.commit()
+          flash('Successfully saved template for {}.'.format(zone.name), 'success')
+          return redirect(url_for('zone_bp.list'))
+        except Exception as e:
+          flash('Failed to save zone template, error: {}'.format(e), 'danger')
+  if form.errors:
+    flash("Errors must be resolved before zone template can be saved", 'danger')
+  return render_template('zone_edit_template.html', form=form, zone=zone)
+
 
 
 @zone_bp.route('/zone/delete/<int:number>', methods=['GET', 'POST'])
