@@ -3,9 +3,9 @@ from flask.ext.login import current_user, login_required
 from app.views.virtual_pools.models import PoolMembership, VirtualMachinePool, CreateVmForm
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
-from app import db
+from app import app, db
 from app.one import OneProxy
-from jinja2 import Environment
+from jinja2 import Environment, FunctionLoader
 from app.jira_api import JiraApi
 from datetime import datetime
 
@@ -24,8 +24,6 @@ def vm_create(number):
   vars = {'hostname': None,
           'cpu': None,
           'vcpu': None,
-          'image_id': None,
-          'image_uname': None,
           'memory_megabytes': None}
   vm_template = None
   form = CreateVmForm(request.form)
@@ -37,6 +35,7 @@ def vm_create(number):
         if request.form[k] is None or request.form[k] == '':
           raise Exception('expected parameter {} is {}'.format(k, v))
         vars[k] = request.form[k]
+      vars = zone.parsed_vars(vars)
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
       vm_template = Environment().from_string(zone.template).render(vars=vars)
       jira_api = JiraApi()
@@ -50,6 +49,7 @@ def vm_create(number):
       one_proxy.create_vm(template=vm_template)
       flash('Created VM: {}'.format(vars['hostname']))
     except Exception as e:
+      raise e
       flash("Error parsing GET parameters: {}".format(e), category='danger')
   return render_template('vm_create.html',
                          form=form,
@@ -108,9 +108,7 @@ def list(number):
 @vpool_bp.route('/orphaned_vms/zone/<int:number>', methods=['GET', 'POST'])
 @login_required
 def list_orphans(number):
-  #
   # Gather the collections and objects we'll need for managing orphaned VMs
-  #
   vms = []
   id_to_vm = {}
   selected_vm_ids = {}

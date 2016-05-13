@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block container %}
+    {% if one_clusters|length > 0 %}
+        <h4>There are {{one_clusters|length}} ONE clusters(s) in {{ zone.name }}</h4>
+        {% for one_cluster in one_clusters %}
+            <p>{{ one_cluster.name }} (ID={{ one_cluster.id }})</p>
+        {% endfor %}
+    {% else %}
+        <h4>There are no discovered clusters</h4>
+    {% endif %}
+{% endblock %}

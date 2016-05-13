@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block container %}
+    <h2>Edit Zone Template Variables: {{ zone.name }}</h2>
+    <div class="top-pad">
+        <form
+                method="POST"
+                action="{{ url_for('zone_bp.edit_vars', number=zone.number) }}"
+                role="form">
+            {{ form.csrf_token }}
+            <div>{{ form.vars(class_='textarea_vars') }}</div>
+            <button type="submit" name="action" value="save" class="btn btn-default">Save</button>
+            <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+        </form>
+    </div>
+{% endblock %}

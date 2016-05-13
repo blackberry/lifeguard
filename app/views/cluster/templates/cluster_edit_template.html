@@ -1,0 +1,16 @@
+{% extends 'zones_list.html' %}
+{% block container %}
+    <h2>Edit Cluster Template</h2>
+    <p>{{ cluster.name }} (ID={{ cluster.id }})</p>
+    <div class="top-pad">
+        <form
+                method="POST"
+                action="{{ url_for('cluster_bp.edit_template', zone_number=cluster.zone.number, cluster_id=cluster.id) }}"
+                role="form">
+            {{ form.csrf_token }}
+            <div>{{ form.template(class_='textarea_vars') }}</div>
+            <button type="submit" name="action" value="save" class="btn btn-default">Save</button>
+            <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+        </form>
+    </div>
+{% endblock %}

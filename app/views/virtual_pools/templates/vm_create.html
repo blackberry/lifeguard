@@ -47,24 +47,6 @@
                 </td>
             </tr>
             <tr>
-                <td class="form-label">{{ form.image_id.label }}</td>
-                <td>{{ form.image_id() }}</td>
-                <td>
-                    {% for error in form.errors.image_id %}
-                        <span style="color: red;">{{ error }}</span><br/>
-                    {% endfor %}
-                </td>
-            </tr>
-            <tr>
-                <td class="form-label">{{ form.image_uname.label }}</td>
-                <td>{{ form.image_uname() }}</td>
-                <td>
-                    {% for error in form.errors.image_uname %}
-                        <span style="color: red;">{{ error }}</span><br/>
-                    {% endfor %}
-                </td>
-            </tr>
-            <tr>
                 <td>&nbsp;</td>
                 <td>
                     <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
@@ -72,5 +54,9 @@
                 </td>
             </tr>
         </table>
+        <br />
+        <h2>Template:</h2>
+        <br />
+        <pre>{{ vm_template }}</pre>
     </form>
 {% endblock %}

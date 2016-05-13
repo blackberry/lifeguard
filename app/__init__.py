@@ -18,6 +18,11 @@ from app.views.virtual_pools import vpool_bp
 app.register_blueprint(vpool_bp)
 
 from app.views.zone import zone_bp
+from app.views.cluster import cluster_bp
+
 app.register_blueprint(zone_bp)
+app.register_blueprint(cluster_bp)
+
+
 
 db.create_all()
