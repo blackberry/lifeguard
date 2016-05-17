@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }}</h2>
+    <p>Actions:</p>
+    <ul>
+        <li><a href="{{ url_for('zone_bp.discover', number=zone.number) }}">discover clusters</a></li>
+        <li><a href="{{ url_for('vpool_bp.vm_create', number=zone.number) }}">create VM</a></li>
+        <li><a href="{{ url_for('zone_bp.manage', number=zone.number) }}">edit</a></li>
+        <li><a href="{{ url_for('zone_bp.edit_template', number=zone.number) }}">template</a></li>
+        <li><a href="{{ url_for('zone_bp.edit_vars', number=zone.number) }}">variables</a></li>
+        <li><a href="{{ url_for('zone_bp.delete', number=zone.number) }}">delete</a></li>
+    </ul>
+    <p>Clusters: </p>
+    <ul>
+        {% for cluster in zone.get_clusters() %}
+            <li><a href="{{ url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id) }}">{{ cluster.name }}</a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}

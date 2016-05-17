@@ -14,7 +14,7 @@ login_manager.login_view = 'auth.login'
 from app.views.auth import auth_bp
 app.register_blueprint(auth_bp)
 
-from app.views.virtual_pools import vpool_bp
+from app.views.vpool import vpool_bp
 app.register_blueprint(vpool_bp)
 
 from app.views.zone import zone_bp

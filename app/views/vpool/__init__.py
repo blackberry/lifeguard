@@ -1,8 +1,8 @@
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
-from app.views.virtual_pools.models import PoolMembership, VirtualMachinePool, CreateVmForm
+from app.views.vpool.models import PoolMembership, VirtualMachinePool, CreateVmForm
 from app.views.common.models import ActionForm
-from app.views.zone.models import Zone
+from app.views.zone.models import Zone, Cluster
 from app import app, db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
@@ -15,6 +15,10 @@ vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 @vpool_bp.before_request
 def get_current_user():
   g.user = current_user
+
+
+def zone_template_loader(zone_number):
+  return Zone.query.get(zone_number).template
 
 
 @vpool_bp.route('/test_vm_create/zone/<int:number>', methods=['GET', 'POST'])
@@ -37,16 +41,23 @@ def vm_create(number):
         vars[k] = request.form[k]
       vars = zone.parsed_vars(vars)
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-      vm_template = Environment().from_string(zone.template).render(vars=vars)
-      jira_api = JiraApi()
-      jira_api.connect()
-      new_issue = jira_api.instance.create_issue(
-        project='IPGBD',
-        summary='[auto] VM instantiated: {}'.format(vars['hostname']),
-        description='Template: {}'.format(vm_template),
-        customfield_13842=jira_api.get_datetime_now(),
-        issuetype={'name': 'Task'})
-      one_proxy.create_vm(template=vm_template)
+
+
+      cluster = Cluster.query.filter_by(zone_number=82, id=101).first()
+
+      obj_loader = FunctionLoader(zone_template_loader)
+      env = Environment(loader=obj_loader)
+      vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
+
+      #jira_api = JiraApi()
+      #jira_api.connect()
+      #new_issue = jira_api.instance.create_issue(
+      #  project='IPGBD',
+      #  summary='[auto] VM instantiated: {}'.format(vars['hostname']),
+      #  description='Template: {}'.format(vm_template),
+      #  customfield_13842=jira_api.get_datetime_now(),
+      #  issuetype={'name': 'Task'})
+      #one_proxy.create_vm(template=vm_template)
       flash('Created VM: {}'.format(vars['hostname']))
     except Exception as e:
       raise e
@@ -57,7 +68,7 @@ def vm_create(number):
                          vm_template=vm_template)
 
 
-@vpool_bp.route('/virtual_pools/view/<int:pool_id>', methods=['GET', 'POST'])
+@vpool_bp.route('/vpool/view/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def view_pool(pool_id):
   pool = None
@@ -65,7 +76,7 @@ def view_pool(pool_id):
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    one_proxy = OneProxy(pool.zone.xmlrpc_uri, pool.zone.session_string, verify_certs=False)
+    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
     vms = one_proxy.get_vms(include_done=True)
     if vms is None or len(vms) == 0:
       raise Exception("Warning: There were no VMs found in Zone!")
@@ -79,52 +90,60 @@ def view_pool(pool_id):
                          vms_by_id=vms_by_id)
 
 
-@vpool_bp.route('/virtual_pools/list/zone/<int:number>', methods=['GET', 'POST'])
+@vpool_bp.route('/vpool/list/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
-def list(number):
-  zone = None
-  clusters = {}
+def list(zone_number, cluster_id):
   memberships = {}
   pools = []
   try:
-    zone = Zone.query.get(number)
-    one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-    for cluster in one_proxy.get_clusters():
-      clusters[cluster.id] = cluster
-    pools = VirtualMachinePool.get_all(zone).order_by(VirtualMachinePool.name)
-    for membership in PoolMembership.get_all(zone):
+    cluster = Cluster.query.filter_by(zone_number=zone_number, id=cluster_id).first()
+    one_proxy = OneProxy(cluster.zone.xmlrpc_uri, cluster.zone.session_string, verify_certs=False)
+    pools = VirtualMachinePool.get_all(cluster).order_by(VirtualMachinePool.name)
+
+    for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
       memberships[membership.vm_id] = membership
+
   except Exception as e:
-    flash("Error virtual pools in zone number {}: {}"
-          .format(number, e), category='danger')
+    flash("Error virtual pools in zone {} cluster {}: {}"
+          .format(cluster.zone.name, cluster.name, e), category='danger')
   return render_template(
     'virtual_pool_list.html',
-    zone=zone,
     pools=pools,
-    clusters=clusters,
+    cluster=cluster,
     memberships=memberships)
 
 
-@vpool_bp.route('/orphaned_vms/zone/<int:number>', methods=['GET', 'POST'])
+@vpool_bp.route('/orphaned_vms/zone/<int:number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
-def list_orphans(number):
+def list_orphans(number, cluster_id):
   # Gather the collections and objects we'll need for managing orphaned VMs
   vms = []
   id_to_vm = {}
   selected_vm_ids = {}
   pools = None
   zone = None
+  cluster = None
   memberships = {}
   try:
     zone = Zone.query.get(number)
+    cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-    for membership in PoolMembership.get_all(zone):
+
+
+
+    for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
       memberships[membership.vm_id] = membership
+
+
+
+
     for vm in one_proxy.get_vms():
-      vms.append(vm)
-      id_to_vm[vm.id] = vm
-    pools = VirtualMachinePool.get_all(zone)
+      if vm.disk_cluster.id == cluster.id:
+        vms.append(vm)
+        id_to_vm[vm.id] = vm
+    pools = VirtualMachinePool.get_all(cluster)
   except Exception as e:
+    raise e
     flash("Error fetching VMs in zone number {}: {}"
           .format(number, e), category='danger')
   form = ActionForm()
@@ -167,7 +186,6 @@ def list_orphans(number):
           raise Exception('Pool name cannot be blank')
         pool = VirtualMachinePool(
           name=request.form['new_pool_name'],
-          zone=zone,
           cluster_id=next(iter(selected_clusters.keys())))
         db.session.add(pool)
         db.session.flush()
@@ -187,6 +205,7 @@ def list_orphans(number):
     'orphaned_vms.html',
     form=form,
     zone=zone,
+    cluster=cluster,
     vms=vms,
     memberships=memberships,
     selected_vm_ids=selected_vm_ids,

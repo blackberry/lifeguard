@@ -12,7 +12,13 @@ zone_bp = Blueprint('zone_bp', __name__, template_folder='templates')
 @login_required
 def list():
   zones = Zone.query.order_by(Zone.number.desc()).all()
-  return render_template('zones_list.html', zones=zones)
+  return render_template('zone/list.html', zones=zones)
+
+@zone_bp.route('/zone/<int:zone_number>', methods=['GET'])
+@login_required
+def view(zone_number):
+  zone = Zone.query.get(zone_number)
+  return render_template('zone/view.html', zone=zone)
 
 
 @zone_bp.route('/zone/edit/<int:number>', methods=['GET', 'POST'])

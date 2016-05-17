@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2>
+        <a href="{{ url_for('zone_bp.list') }}">Zones</a> /
+        <a href="{{ url_for('zone_bp.view', zone_number=cluster.zone.number) }}">{{ cluster.zone.name }}</a> /
+        {{ cluster.name }}
+    </h2>
+    <p>Actions:</p>
+    <ul>
+        <li>
+            <a href="{{ url_for('cluster_bp.edit_template', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">template</a>
+        </li>
+        <li>
+            <a href="{{ url_for('cluster_bp.edit_vars', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">variables</a>
+        </li>
+        <li><a href="{{ url_for('vpool_bp.list_orphans', number=cluster.zone.number, cluster_id=cluster.id) }}">orphaned vms</a>
+        </li>
+        <li><a href="{{ url_for('vpool_bp.list', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">virtual server
+            pools</a>]
+        </li>
+    </ul>
+    <br/>
+    <p>Virtual Pools</p>
+    {% if cluster.get_pools()|length > 0 %}
+        <ul>
+            {% for pool in cluster.get_pools() %}
+                <li><a href="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}">{{ pool.name }}</a></li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

@@ -6,25 +6,23 @@ from wtforms.validators import InputRequired
 class VirtualMachinePool(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String(100), unique=True, nullable=False)
-  zone_number = db.Column(db.Integer, db.ForeignKey('zone.number'), nullable=False, )
-  zone = db.relationship('Zone', backref=db.backref('zone', lazy='dynamic'))
-  cluster_id = db.Column(db.Integer, nullable=False)
+  cluster_id = db.Column(db.Integer, db.ForeignKey('cluster.id'), nullable=False)
+  cluster = db.relationship('Cluster', backref=db.backref('cluster', lazy='dynamic'))
 
-  def __init__(self, id=None, name=None, zone_number=None, zone=None, cluster_id=None):
+  def __init__(self, id=None, name=None, cluster_id=None, cluster=None):
     self.id = id
     self.name = name
-    self.zone_number = zone_number
-    self.zone = zone
     self.cluster_id = cluster_id
+    self.cluster = cluster
 
   def get_memberships(self):
     return db.session.query(PoolMembership).join(
       PoolMembership.pool, aliased=True).filter_by(id=self.id).all()
 
   @staticmethod
-  def get_all(zone):
+  def get_all(cluster):
     return db.session.query(VirtualMachinePool).join(
-      VirtualMachinePool.zone, aliased=True).filter_by(number=zone.number)
+      VirtualMachinePool.cluster, aliased=True).filter_by(id=cluster.id)
 
 
 class PoolMembership(db.Model):

@@ -21,7 +21,7 @@ def get_current_user():
 @auth_bp.route('/')
 @auth_bp.route('/auth')
 def home():
-  return render_template('auth.html')
+  return render_template('auth/auth.html')
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -42,12 +42,12 @@ def login():
       flash(
         'Invalid username or password. Please try again.',
         'danger')
-      return render_template('login.html', form=form)
+      return render_template('auth/login.html', form=form)
 
     user = User.query.filter_by(username=username).first()
 
     if not user:
-      user = User(username, password)
+      user = User(username)
       db.session.add(user)
       db.session.commit()
     login_user(user)
@@ -57,7 +57,7 @@ def login():
   if form.errors:
     flash(form.errors, 'danger')
 
-  return render_template('login.html', form=form)
+  return render_template('auth/login.html', form=form)
 
 
 @auth_bp.route('/logout')

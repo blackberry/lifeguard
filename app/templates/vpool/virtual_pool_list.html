@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block container %}
+    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ cluster.zone.name }} / {{ cluster.name }} / Virtual Server Pools</h2>
+    <br />
+    {% for pool in pools %}
+        <p><a href="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}">{{ pool.name }}</a>  ({{ pool.get_memberships()|length }} VMs)</p>
+    {% else %}
+        <p>No virtual server pools have been created yet.</p>
+        <br />
+        <p>You can create virtual server pools from orphaned VMs in {{ cluster.zone.name }} <a href="{{ url_for('vpool_bp.list_orphans', number=cluster.zone.number, cluster_id=cluster.id) }}">here</a></p>
+    {% endfor %}
+{% endblock %}
