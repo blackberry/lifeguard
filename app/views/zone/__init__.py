@@ -68,9 +68,6 @@ def discover(zone_number):
       db.session.commit()
       flash('Newly discovered ONE cluster: {} (ID={}) in zone {}'
             .format(one_cluster.id, one_cluster.name, zone.name), category='success')
-    else:
-      flash('Previously discovered: {} (ID={}) in zone {}'
-            .format(one_cluster.id, one_cluster.name, zone.name))
   return render_template('zone/discover.html', zone=zone, one_clusters=one_clusters)
 
 
@@ -86,7 +83,8 @@ def edit_template(zone_number):
     elif request.form['action'] == "save":
       if form.validate():
         try:
-          form.populate_obj(zone)
+          zone.template = request.form['template']
+          zone.vars = request.form['vars']
           db.session.add(zone)
           db.session.commit()
           flash('Successfully saved template for {}.'.format(zone.name), 'success')

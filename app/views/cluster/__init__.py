@@ -23,18 +23,18 @@ def edit_template(zone_number, cluster_id):
   if request.method == 'POST':
     if request.form['action'] == "cancel":
       flash('Cancelled {} cluster template update'.format(cluster.name), category="info")
-      return redirect(url_for('cluster_bp.view', cluster_id=cluster.id))
+      return redirect(url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id))
     elif request.form['action'] == "save":
-      if form.validate():
-        try:
-          form.populate_obj(cluster)
-          db.session.add(cluster)
-          db.session.commit()
-          flash('Successfully saved cluster template for {} (ID={}).'
-                .format(cluster.name, cluster.id), 'success')
-          return redirect(url_for('zone_bp.list'))
-        except Exception as e:
-          flash('Failed to save cluster template, error: {}'.format(e), 'danger')
+      try:
+        cluster.template = request.form['template']
+        cluster.vars = request.form['vars']
+        db.session.add(cluster)
+        db.session.commit()
+        flash('Successfully saved cluster template for {} (ID={}).'
+              .format(cluster.name, cluster.id), 'success')
+        return redirect(url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id))
+      except Exception as e:
+        flash('Failed to save cluster template, error: {}'.format(e), 'danger')
   if form.errors:
     flash("Errors must be resolved before cluster template can be saved", 'danger')
   return render_template('cluster/edit_template.html', form=form, cluster=cluster)

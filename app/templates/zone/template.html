@@ -1,14 +1,13 @@
 {% extends 'zone/view.html' %}
-
 {% block page_title %}
-    <a href="{{ url_for('zone_bp.list') }}">Zones</a> /  {{ zone.name }} / Edit Template and Vars
+    {{ super() }}
 {% endblock %}
-
 {% block menu %}
     {{ super() }}
 {% endblock %}
-
 {% block container %}
+    <h3>Edit Template and Variables:</h3>
+    <p>Use the below form to modify the base template for all clusters within the zone.</p>
     <div class="top-pad">
         <form
                 method="POST"
@@ -18,12 +17,18 @@
             <table width="100%">
                 <tr>
                     <td width="60%">
-                        <h3>Template:</h3>
-                        <div>{{ form.template(class_='textarea_vars') }}</div>
+                        <strong>Template:</strong>
+
+                        <div>
+                            <textarea name="template" class="textarea_vars" wrap="off">{{ zone.template }}</textarea>
+                        </div>
                     </td>
                     <td>
-                        <h3>Variables:</h3>
-                        <div>{{ form.vars(class_='textarea_vars') }}</div>
+                        <strong>Variables:</strong>
+
+                        <div>
+                            <textarea name="vars" class="textarea_vars" wrap="off">{{ zone.vars }}</textarea>
+                        </div>
                     </td>
                 </tr>
             </table>

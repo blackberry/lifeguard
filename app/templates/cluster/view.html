@@ -9,9 +9,8 @@
     <ul>
         <li><a href="{{ url_for('cluster_bp.edit_template', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">Edit Template/Variables</a></li>
         <li><a href="{{ url_for('vpool_bp.assign_to_pool', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">Assign VMs to Pools</a></li>
-        <li><a href="{{ url_for('vpool_bp.list', zone_number=cluster.zone.number, cluster_id=cluster.id) }}">virtual server pools</a></li>
     </ul>
-    <h3>Virtual Pools</h3>
+    <h3>Virtual Pools:</h3>
     <ul>
         {% for pool in cluster.get_pools() %}
             <li><a href="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}">{{ pool.name }}</a></li>

@@ -1,6 +1,6 @@
 {% extends "zone/view.html" %}
 {% block page_title %}
-    <a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Discover
+    {{ super() }}
 {% endblock %}
 
 {% block menu %}
@@ -8,8 +8,9 @@
 {% endblock %}
 
 {% block container %}
+    <h3>Discover Clusters in Zone:</h3>
     {% if one_clusters|length > 0 %}
-        <h4>There are {{one_clusters|length}} ONE clusters(s) in {{ zone.name }}</h4>
+        <p>There are {{one_clusters|length}} ONE clusters(s) in {{ zone.name }}</p>
         {% for one_cluster in one_clusters %}
             <p>{{ one_cluster.name }} (ID={{ one_cluster.id }})</p>
         {% endfor %}
