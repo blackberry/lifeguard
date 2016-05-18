@@ -1,0 +1,34 @@
+{% extends 'zone/view.html' %}
+
+{% block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a> /  {{ zone.name }} / Edit Template and Vars
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <div class="top-pad">
+        <form
+                method="POST"
+                action="{{ url_for('zone_bp.edit_template', zone_number=zone.number) }}"
+                role="form">
+            {{ form.csrf_token }}
+            <table width="100%">
+                <tr>
+                    <td width="60%">
+                        <h3>Template:</h3>
+                        <div>{{ form.template(class_='textarea_vars') }}</div>
+                    </td>
+                    <td>
+                        <h3>Variables:</h3>
+                        <div>{{ form.vars(class_='textarea_vars') }}</div>
+                    </td>
+                </tr>
+            </table>
+            <button type="submit" name="action" value="save" class="btn btn-default">Save</button>
+            <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+        </form>
+    </div>
+{% endblock %}

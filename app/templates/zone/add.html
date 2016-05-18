@@ -1,0 +1,16 @@
+{% extends "zone/list.html" %}
+
+{% block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a>
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <h3>Add A New Zone:</h3>
+    OpenNebula zones must be added and configured with your session string (username/password) before you can manage your cloud resources
+    <br /><br />
+    {% include 'zone/form.html' %}
+{% endblock %}

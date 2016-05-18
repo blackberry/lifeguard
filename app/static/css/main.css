@@ -30,8 +30,7 @@ body {
 
 .textarea_vars {
     height: 800px;
-    width: 800px;
-    wrap-option: soft;
+    width: 100%;
 }
 
 .sub_title3 {
@@ -40,4 +39,30 @@ body {
 
 .sub_title2 {
     font-size: 24px;
+}
+
+.h3, h3 {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.tight {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.menu-panel {
+    background-color: #fefefe;
+    padding-top: 20px;
+}
+
+.title-panel {
+    background-color: #fefefe;
+    border-bottom: 1px solid #cccccc;
+}
+
+.content-panel {
+    border-left: 1px solid #cccccc;
+    background-color: #fefefe;
+    padding-top: 20px;
 }

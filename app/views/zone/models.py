@@ -44,7 +44,4 @@ class ZoneForm(Form):
 
 class ZoneTemplateForm(Form):
   template = TextAreaField('Zone Template')
-
-
-class ZoneVarsForm(Form):
   vars = TextAreaField('Zone Variables')

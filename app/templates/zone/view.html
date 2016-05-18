@@ -1,19 +1,22 @@
 {% extends "base.html" %}
-{% block container %}
-    <h2><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }}</h2>
-    <p>Actions:</p>
+{%  block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }}
+{% endblock %}
+{% block menu %}
+    <h3>Actions:</h3>
     <ul>
-        <li><a href="{{ url_for('zone_bp.discover', number=zone.number) }}">discover clusters</a></li>
-        <li><a href="{{ url_for('vpool_bp.vm_create', number=zone.number) }}">create VM</a></li>
-        <li><a href="{{ url_for('zone_bp.manage', number=zone.number) }}">edit</a></li>
-        <li><a href="{{ url_for('zone_bp.edit_template', number=zone.number) }}">template</a></li>
-        <li><a href="{{ url_for('zone_bp.edit_vars', number=zone.number) }}">variables</a></li>
-        <li><a href="{{ url_for('zone_bp.delete', number=zone.number) }}">delete</a></li>
+        <li><a href="{{ url_for('zone_bp.discover', zone_number=zone.number) }}">Discover clusters</a></li>
+        <li><a href="{{ url_for('zone_bp.manage', zone_number=zone.number) }}">Edit Zone Details</a></li>
+        <li><a href="{{ url_for('zone_bp.edit_template', zone_number=zone.number) }}">Edit Template/Variables</a></li>
+        <li><a href="{{ url_for('zone_bp.delete', zone_number=zone.number) }}">Delete</a></li>
     </ul>
-    <p>Clusters: </p>
+    <h3>Clusters: </h3>
     <ul>
         {% for cluster in zone.get_clusters() %}
             <li><a href="{{ url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id) }}">{{ cluster.name }}</a></li>
         {% endfor %}
     </ul>
+{% endblock %}
+{% block container %}
+    <p>Select an action or a cluster from the menu...</p>
 {% endblock %}

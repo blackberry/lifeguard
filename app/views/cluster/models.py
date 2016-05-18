@@ -14,7 +14,6 @@ class Cluster(db.Model):
   vars = db.Column(db.Text())
   ForeignKeyConstraint('zone_number', 'zone.number')
 
-
   def __init__(self, id=id, zone_number=None, zone=None, name=None, template=None, vars=None):
     self.id = id
     self.zone = zone
@@ -43,8 +42,4 @@ class Cluster(db.Model):
 
 
 class ClusterTemplateForm(Form):
-  template = TextAreaField('Cluster Template')
-
-
-class ClusterVarsForm(Form):
-  vars = TextAreaField('Cluster Variables')
+  pass

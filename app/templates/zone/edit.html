@@ -1,0 +1,17 @@
+{% extends "zone/view.html" %}
+
+{% block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Edit
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <h4>Editing Existing Zone: {{ zone.name }}</h4>
+    <br />
+    <p>Use the following form to update an existing zone details.  </p>
+    <br />
+    {% include 'zone/form.html' %}
+{% endblock %}

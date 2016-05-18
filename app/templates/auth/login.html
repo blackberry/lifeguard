@@ -1,6 +1,12 @@
-{% extends 'auth.html' %}
+{% extends 'auth/auth.html' %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+{% block menu %}
+    {{ super() }}
+{% endblock %}
 {% block container %}
-    <p>Please use the following form to login</p>
+    <h3>Please use the following form to login</h3>
     <div class="top-pad">
         <form
                 method="POST"

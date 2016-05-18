@@ -1,4 +1,12 @@
-{% extends "base.html" %}
+{% extends "zone/view.html" %}
+{% block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Discover
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
 {% block container %}
     {% if one_clusters|length > 0 %}
         <h4>There are {{one_clusters|length}} ONE clusters(s) in {{ zone.name }}</h4>

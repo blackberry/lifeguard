@@ -3,7 +3,7 @@ from flask.ext.login import current_user, login_required
 from app.views.vpool.models import PoolMembership, VirtualMachinePool, CreateVmForm
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone, Cluster
-from app import app, db
+from app import db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
 from app.jira_api import JiraApi
@@ -41,14 +41,10 @@ def vm_create(number):
         vars[k] = request.form[k]
       vars = zone.parsed_vars(vars)
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-
-
-      cluster = Cluster.query.filter_by(zone_number=82, id=101).first()
-
+      cluster = Cluster.query.filter_by(zone=zone, id=101).first()
       obj_loader = FunctionLoader(zone_template_loader)
       env = Environment(loader=obj_loader)
       vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
-
       #jira_api = JiraApi()
       #jira_api.connect()
       #new_issue = jira_api.instance.create_issue(
@@ -113,9 +109,9 @@ def list(zone_number, cluster_id):
     memberships=memberships)
 
 
-@vpool_bp.route('/orphaned_vms/zone/<int:number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
+@vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
-def list_orphans(number, cluster_id):
+def assign_to_pool(zone_number, cluster_id):
   # Gather the collections and objects we'll need for managing orphaned VMs
   vms = []
   id_to_vm = {}
@@ -125,18 +121,11 @@ def list_orphans(number, cluster_id):
   cluster = None
   memberships = {}
   try:
-    zone = Zone.query.get(number)
+    zone = Zone.query.get(zone_number)
     cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-
-
-
     for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
       memberships[membership.vm_id] = membership
-
-
-
-
     for vm in one_proxy.get_vms():
       if vm.disk_cluster.id == cluster.id:
         vms.append(vm)
@@ -145,7 +134,7 @@ def list_orphans(number, cluster_id):
   except Exception as e:
     raise e
     flash("Error fetching VMs in zone number {}: {}"
-          .format(number, e), category='danger')
+          .format(zone_, e), category='danger')
   form = ActionForm()
   active_tab = 'create_new_pool'
   # Form submission handling begins
@@ -179,7 +168,7 @@ def list_orphans(number, cluster_id):
           db.session.add(PoolMembership(pool=pool, vm_id=vm_id, date_added=datetime.utcnow()))
           db.session.commit()
         flash('Added {} VMs to {}'.format(len(selected_vm_ids), pool.name))
-        return redirect(url_for('vpool_bp.list_orphans', number=zone.number))
+        return redirect(url_for('vpool_bp.assign_to_pool', zone_number=zone.number, cluster_id=cluster.id))
     if proceed and request.form['action'] == 'create new pool':
       try:
         if request.form['new_pool_name'] is None or request.form['new_pool_name'] == '':
@@ -202,7 +191,7 @@ def list_orphans(number, cluster_id):
         db.session.rollback()
         flash('Error creating your new pool: {}'.format(e), category='danger')
   return render_template(
-    'orphaned_vms.html',
+    'vpool/assign_to_pool.html',
     form=form,
     zone=zone,
     cluster=cluster,

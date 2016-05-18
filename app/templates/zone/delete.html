@@ -1,8 +1,16 @@
-{% extends "list.html" %}
+{% extends "zone/view.html" %}
+{% block page_title %}
+    <a href="{{ url_for('zone_bp.list') }}">Zones</a> /  {{ zone.name }} / Confirm Delete
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
 {% block container %}
     <form
             method="POST"
-            action="{{ url_for('zone_bp.delete', number=zone.number) }}"
+            action="{{ url_for('zone_bp.delete', zone_number=zone.number) }}"
             role="form">
         {{ form.csrf_token }}
         <h3>Please confirm...</h3>
