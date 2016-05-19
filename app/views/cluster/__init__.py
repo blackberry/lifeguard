@@ -1,8 +1,10 @@
 from flask import request, render_template, flash, redirect, url_for, Blueprint
 from flask.ext.login import login_required
-from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster, ClusterTemplateForm
+from app.views.zone.models import Zone
+from app.views.vpool.models import VirtualMachinePool
 from app import db
+from app.one import OneProxy
 
 cluster_bp = Blueprint('cluster_bp', __name__, template_folder='templates')
 
@@ -10,8 +12,9 @@ cluster_bp = Blueprint('cluster_bp', __name__, template_folder='templates')
 @login_required
 def view(zone_number, cluster_id):
   zone = Zone.query.get(zone_number)
-  cluster = zone.get_cluster(cluster_id)
-  return render_template('cluster/view.html', cluster=cluster)
+  cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
+  pools = VirtualMachinePool.query.filter_by(cluster_id=cluster.id, zone_number=cluster.zone_number).all()
+  return render_template('cluster/view.html', cluster=cluster, pools=pools)
 
 
 @cluster_bp.route('/cluster/<int:zone_number>/<int:cluster_id>/template', methods=['GET', 'POST'])

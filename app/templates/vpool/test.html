@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block page_title %}
+Testing
+{% endblock %}
+
+{% block menu %}
+    pool menu!
+{% endblock %}
+
+{% block container %}
+    <h3>Pool Test: </h3>
+    <p>pool zone number: {{ pool.zone_number }}</p>
+    <p>cluster name: {{ pool.cluster.name }}</p>
+    <p>zone name: {{ pool.cluster.zone.name }}</p>
+{% endblock %}

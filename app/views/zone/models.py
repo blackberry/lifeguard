@@ -2,8 +2,6 @@ from flask_wtf import Form
 from wtforms import StringField, PasswordField, TextAreaField
 from wtforms.validators import InputRequired
 from app import db
-from app.views.cluster.models import Cluster
-
 
 class Zone(db.Model):
   number = db.Column(db.Integer, primary_key=True)
@@ -28,11 +26,12 @@ class Zone(db.Model):
       parsed[k.strip()] = v.strip()
     return parsed
 
-  def get_clusters(self):
-    return Cluster.query.filter_by(zone_number=self.number).all()
+  def __str__(self):
+    return 'Zone: number={}, name={}, xmlrpc_uri={}'.format(
+      self.number, self.name, self.xmlrpc_uri)
 
-  def get_cluster(self, cluster_id):
-    return Cluster.query.filter_by(zone_number=self.number, id=cluster_id).first()
+  def __repr__(self):
+    self.__str__()
 
 
 class ZoneForm(Form):

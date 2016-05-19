@@ -12,7 +12,7 @@
     </ul>
     <h3>Clusters: </h3>
     <ul>
-        {% for cluster in zone.get_clusters() %}
+        {% for cluster in clusters %}
             <li><a href="{{ url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id) }}">{{ cluster.name }}</a></li>
         {% endfor %}
     </ul>

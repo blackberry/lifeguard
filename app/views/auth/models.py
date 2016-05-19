@@ -4,7 +4,6 @@ from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired
 from app import db, app
 
-
 class User(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   is_authenticated = True

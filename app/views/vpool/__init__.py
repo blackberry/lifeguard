@@ -2,7 +2,8 @@ from flask import request, redirect, url_for, render_template, flash, Blueprint,
 from flask.ext.login import current_user, login_required
 from app.views.vpool.models import PoolMembership, VirtualMachinePool, CreateVmForm
 from app.views.common.models import ActionForm
-from app.views.zone.models import Zone, Cluster
+from app.views.zone.models import Zone
+from app.views.cluster.models import Cluster
 from app import db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
@@ -64,6 +65,13 @@ def vm_create(number):
                          vm_template=vm_template)
 
 
+@vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
+@login_required
+def test(pool_id):
+  pool = VirtualMachinePool.query.get(pool_id)
+  return render_template('vpool/test.html', pool=pool)
+
+
 @vpool_bp.route('/vpool/view/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def view_pool(pool_id):
@@ -72,6 +80,7 @@ def view_pool(pool_id):
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
+    #cluster = pool.get_cluster()
     one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
     vms = one_proxy.get_vms(include_done=True)
     if vms is None or len(vms) == 0:
@@ -80,33 +89,11 @@ def view_pool(pool_id):
       vms_by_id[vm.id] = vm
   except Exception as e:
     flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
-  return render_template('view_pool.html',
+
+  return render_template('vpool/view.html',
                          form=form,
                          pool=pool,
                          vms_by_id=vms_by_id)
-
-
-@vpool_bp.route('/vpool/list/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
-@login_required
-def list(zone_number, cluster_id):
-  memberships = {}
-  pools = []
-  try:
-    cluster = Cluster.query.filter_by(zone_number=zone_number, id=cluster_id).first()
-    one_proxy = OneProxy(cluster.zone.xmlrpc_uri, cluster.zone.session_string, verify_certs=False)
-    pools = VirtualMachinePool.get_all(cluster).order_by(VirtualMachinePool.name)
-
-    for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
-      memberships[membership.vm_id] = membership
-
-  except Exception as e:
-    flash("Error virtual pools in zone {} cluster {}: {}"
-          .format(cluster.zone.name, cluster.name, e), category='danger')
-  return render_template(
-    'virtual_pool_list.html',
-    pools=pools,
-    cluster=cluster,
-    memberships=memberships)
 
 
 @vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
@@ -124,8 +111,11 @@ def assign_to_pool(zone_number, cluster_id):
     zone = Zone.query.get(zone_number)
     cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-    for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
-      memberships[membership.vm_id] = membership
+
+    #for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
+    #  memberships[membership.vm_id] = membership
+
+
     for vm in one_proxy.get_vms():
       if vm.disk_cluster.id == cluster.id:
         vms.append(vm)
@@ -175,7 +165,8 @@ def assign_to_pool(zone_number, cluster_id):
           raise Exception('Pool name cannot be blank')
         pool = VirtualMachinePool(
           name=request.form['new_pool_name'],
-          cluster_id=next(iter(selected_clusters.keys())))
+          cluster_id=cluster.id,
+          zone_number=zone.number)
         db.session.add(pool)
         db.session.flush()
         for vm_id in selected_vm_ids.keys():

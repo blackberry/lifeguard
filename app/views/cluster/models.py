@@ -1,8 +1,8 @@
 from flask_wtf import Form
-from wtforms import TextAreaField
-from app import app, db
+from app import db
 from sqlalchemy.schema import ForeignKeyConstraint
-from app.views.vpool import VirtualMachinePool
+
+#from app.views.vpool.models import VirtualMachinePool
 
 
 class Cluster(db.Model):
@@ -37,9 +37,15 @@ class Cluster(db.Model):
       parsed[k.strip()] = v.strip()
     return parsed
 
-  def get_pools(self):
-    return VirtualMachinePool.query.filter_by(cluster=self).all()
+  #def get_pools(self):
+  #  return VirtualMachinePool.query.filter_by(cluster=self).all()
 
+  def __str__(self):
+    return 'Cluster: id={}, name={}, zone_number={}, zone={}'.format(
+      self.id, self.name, self.zone_number, self.zone)
+
+  def __repr__(self):
+    self.__str__()
 
 class ClusterTemplateForm(Form):
   pass
