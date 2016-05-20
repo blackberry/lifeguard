@@ -1,14 +1,21 @@
-{% extends "base.html" %}
+{% extends "cluster/view.html" %}
+
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
 {% block container %}
-    <h2 xmlns="http://www.w3.org/1999/html"><a href="{{ url_for('zone_bp.list') }}">Zones</a> / {{ zone.name }} / Create
-        VM</h2>
+    <h3>Create a VM</h3>
     <br/>
     <form
             method="POST"
-            action="{{ url_for('vpool_bp.vm_create', number=zone.number) }}"
+            action="{{ url_for('cluster_bp.vm_create', zone_number=cluster.zone.number, cluster_id=cluster.id) }}"
             role="form">
         {{ form.csrf_token }}
-        <h3>Create a VM:</h3>
         <table>
             <tr>
                 <td class="form-label">{{ form.hostname.label }}</td>

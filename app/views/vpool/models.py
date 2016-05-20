@@ -102,10 +102,3 @@ class PoolMembership(db.Model):
   def get_all(zone):
     return db.session.query(PoolMembership).join(
       PoolMembership.pool, aliased=True).filter_by(zone=zone)
-
-
-class CreateVmForm(Form):
-  hostname = StringField('Hostname', [InputRequired()], default='<somename>.log82.altus.bblabs')
-  cpu = StringField('CPU', [InputRequired()], default='.25')
-  vcpu = StringField('VCPU', [InputRequired()], default='1')
-  memory_megabytes = StringField('Memory (MB)', [InputRequired()], default='2048')

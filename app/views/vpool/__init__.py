@@ -1,13 +1,11 @@
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
-from app.views.vpool.models import PoolMembership, VirtualMachinePool, CreateVmForm
+from app.views.vpool.models import PoolMembership, VirtualMachinePool
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
 from app import db
 from app.one import OneProxy
-from jinja2 import Environment, FunctionLoader
-from app.jira_api import JiraApi
 from datetime import datetime
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
@@ -17,52 +15,6 @@ vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 def get_current_user():
   g.user = current_user
 
-
-def zone_template_loader(zone_number):
-  return Zone.query.get(zone_number).template
-
-
-@vpool_bp.route('/test_vm_create/zone/<int:number>', methods=['GET', 'POST'])
-@login_required
-def vm_create(number):
-  zone = Zone.query.get(number)
-  vars = {'hostname': None,
-          'cpu': None,
-          'vcpu': None,
-          'memory_megabytes': None}
-  vm_template = None
-  form = CreateVmForm(request.form)
-  if form.validate_on_submit():
-    if request.form['action'] == 'cancel':
-      redirect(url_for('zone_bp.list'))
-    try:
-      for k, v in vars.items():
-        if request.form[k] is None or request.form[k] == '':
-          raise Exception('expected parameter {} is {}'.format(k, v))
-        vars[k] = request.form[k]
-      vars = zone.parsed_vars(vars)
-      one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-      cluster = Cluster.query.filter_by(zone=zone, id=101).first()
-      obj_loader = FunctionLoader(zone_template_loader)
-      env = Environment(loader=obj_loader)
-      vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
-      #jira_api = JiraApi()
-      #jira_api.connect()
-      #new_issue = jira_api.instance.create_issue(
-      #  project='IPGBD',
-      #  summary='[auto] VM instantiated: {}'.format(vars['hostname']),
-      #  description='Template: {}'.format(vm_template),
-      #  customfield_13842=jira_api.get_datetime_now(),
-      #  issuetype={'name': 'Task'})
-      #one_proxy.create_vm(template=vm_template)
-      flash('Created VM: {}'.format(vars['hostname']))
-    except Exception as e:
-      raise e
-      flash("Error parsing GET parameters: {}".format(e), category='danger')
-  return render_template('vm_create.html',
-                         form=form,
-                         zone=zone,
-                         vm_template=vm_template)
 
 
 @vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
@@ -76,11 +28,12 @@ def test(pool_id):
 @login_required
 def view_pool(pool_id):
   pool = None
+  pools = []
   vms_by_id = {}
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    #cluster = pool.get_cluster()
+    pools = VirtualMachinePool.query.filter_by(cluster_id=pool.cluster.id, zone_number=pool.cluster.zone_number).all()
     one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
     vms = one_proxy.get_vms(include_done=True)
     if vms is None or len(vms) == 0:
@@ -93,6 +46,8 @@ def view_pool(pool_id):
   return render_template('vpool/view.html',
                          form=form,
                          pool=pool,
+                         pools=pools,
+                         cluster=pool.cluster,
                          vms_by_id=vms_by_id)
 
 

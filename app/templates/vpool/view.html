@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "cluster/view.html" %}
 
 {% block page_title %}
     <a href="{{ url_for('zone_bp.list') }}">Zones</a>
@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block menu %}
-    pool menu!
+    {{ super() }}
 {% endblock %}
 
 {% block container %}
