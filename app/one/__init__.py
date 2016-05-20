@@ -117,6 +117,22 @@ class OneProxy:
       })
     return items
 
+  def _populate_cluster_on_vms(self, vms):
+    """
+    Helper method to populate the cluster object on a VM
+    :param vms:
+    :return:
+    """
+    clusters = self.get_clusters()
+    cluster_id_to_name = {}
+    for cluster in clusters:
+      cluster_id_to_name[cluster.id] = cluster
+    for vm in vms:
+      if vm.disk_cluster_id is not None and vm.disk_cluster_id in cluster_id_to_name:
+        vm.disk_cluster = cluster_id_to_name[vm.disk_cluster_id]
+    return vms
+
+
   def get_vms(self, include_done=False):
     """
     Returns all VMs in a given zone
@@ -131,17 +147,28 @@ class OneProxy:
         response[2],
         response[1])))
     items = []
-    clusters = self.get_clusters()
-    cluster_id_to_name = {}
-    for cluster in clusters:
-      cluster_id_to_name[cluster.id] = cluster
     for child in etree.fromstring(response[1]):
-      vm = VirtualMachine.from_xml_etree(child)
-      if vm.disk_cluster_id is not None:
-        vm.disk_cluster = cluster_id_to_name[vm.disk_cluster_id]
-      items.append(vm)
+      items.append(VirtualMachine.from_xml_etree(child))
+    self._populate_cluster_on_vms(items)
     items.sort(key=lambda x: x.name)
     return items
+
+
+  def get_vm(self, id):
+    """
+    Returns a VM in a given zone
+    :return:
+    """
+    response = self.proxy.one.vm.info(self.session_string, id)
+    if response[0] is not True:
+      raise (Exception("one.vm.info failed (error code: {}) {}".format(
+        response[2],
+        response[1])))
+    xml = etree.fromstring(response[1])
+    vm = VirtualMachine.from_xml_etree(xml)
+    return self._populate_cluster_on_vms([vm])[0]
+
+
 
   def get_clusters(self):
     """

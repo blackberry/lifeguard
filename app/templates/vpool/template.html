@@ -1,0 +1,34 @@
+{% extends 'vpool/view.html' %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+{% block container %}
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.edit_template', pool_id=pool.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <h3>Edit Pool Template and Variables</h3>
+        <table width="100%">
+            <tr>
+                <td width="60%">
+                    <strong>Template:</strong>
+                    <div>
+                        <textarea name="template" class="textarea_vars" wrap="off">{{ pool.template }}</textarea>
+                    </div>
+                </td>
+                <td>
+                    <strong>Variables:</strong>
+                    <div>
+                        <textarea name="vars" class="textarea_vars" wrap="off">{{ pool.vars }}</textarea>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <button type="submit" name="action" value="save" class="btn btn-default">Save</button>
+        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+    </form>
+{% endblock %}

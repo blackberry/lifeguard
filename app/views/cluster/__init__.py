@@ -49,7 +49,7 @@ def edit_template(zone_number, cluster_id):
         flash('Failed to save cluster template, error: {}'.format(e), 'danger')
   if form.errors:
     flash("Errors must be resolved before cluster template can be saved", 'danger')
-  return render_template('cluster/edit_template.html',
+  return render_template('cluster/template.html',
                          form=form,
                          cluster=cluster,
                          pools=pools)

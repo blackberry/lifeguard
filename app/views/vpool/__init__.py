@@ -1,12 +1,14 @@
+import sys, traceback
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
-from app.views.vpool.models import PoolMembership, VirtualMachinePool
+from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolTemplateForm
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
 from app import db
 from app.one import OneProxy
 from datetime import datetime
+import timeit
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
@@ -28,27 +30,52 @@ def test(pool_id):
 @login_required
 def view_pool(pool_id):
   pool = None
-  pools = []
   vms_by_id = {}
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    pools = VirtualMachinePool.query.filter_by(cluster_id=pool.cluster.id, zone_number=pool.cluster.zone_number).all()
     one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
-    vms = one_proxy.get_vms(include_done=True)
-    if vms is None or len(vms) == 0:
-      raise Exception("Warning: There were no VMs found in Zone!")
-    for vm in vms:
-      vms_by_id[vm.id] = vm
-  except Exception as e:
-    flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
+    start_time = timeit.default_timer()
+    memberships = PoolMembership.query.filter_by(pool=pool)
+    for membership in memberships:
+      vms_by_id[membership.vm_id] = one_proxy.get_vm(membership.vm_id)
+    flash('fetched {} vms in {} time'.format(len(vms_by_id), start_time - timeit.default_timer()))
 
+  except Exception as e:
+    traceback.print_exc(file=sys.stdout)
+    flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
   return render_template('vpool/view.html',
                          form=form,
                          pool=pool,
-                         pools=pools,
-                         cluster=pool.cluster,
                          vms_by_id=vms_by_id)
+
+
+@vpool_bp.route('/vpool/<int:pool_id>/template', methods=['GET', 'POST'])
+@login_required
+def   edit_template(pool_id):
+  pool = VirtualMachinePool.query.get(pool_id)
+  form = PoolTemplateForm(request.form, obj=pool)
+  if request.method == 'POST':
+    if request.form['action'] == "cancel":
+      flash('Cancelled {} pool template update'.format(pool.name), category="info")
+      return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+    elif request.form['action'] == "save":
+      try:
+        pool.template = request.form['template']
+        pool.vars = request.form['vars']
+        db.session.add(pool)
+        db.session.commit()
+        flash('Successfully saved pool template for {} (ID={}).'
+              .format(pool.name, pool.id), 'success')
+        return redirect(url_for('vpool_bp.view_pool', pool_id=pool.id))
+      except Exception as e:
+        flash('Failed to save pool template, error: {}'.format(e), 'danger')
+  if form.errors:
+    flash("Errors must be resolved before pool template can be saved", 'danger')
+  return render_template('vpool/template.html',
+                         form=form,
+                         pool=pool)
+
 
 
 @vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
