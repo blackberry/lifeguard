@@ -3,7 +3,11 @@ from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.login import LoginManager
 
 app = Flask(__name__)
+
+
 app.config.from_envvar('LIFEGUARD_CFG_FILE')
+
+
 db = SQLAlchemy(app)
 
 login_manager = LoginManager()

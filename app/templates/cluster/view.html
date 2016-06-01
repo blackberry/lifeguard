@@ -10,6 +10,7 @@
         <li><a href="{{ url_for('cluster_bp.edit_template', zone_number=cluster.zone_number, cluster_id=cluster.id) }}">Edit Template/Vars</a></li>
         <li><a href="{{ url_for('vpool_bp.assign_to_pool', zone_number=cluster.zone_number, cluster_id=cluster.id) }}">Assign VMs to Pools</a></li>
         <li><a href="{{ url_for('cluster_bp.vm_create', zone_number=cluster.zone_number, cluster_id=cluster.id) }}">Create VM</a></li>
+        <li><a href="{{ url_for('cluster_bp.gen_template', zone_number=cluster.zone_number, cluster_id=cluster.id) }}">Generate Template</a></li>
     </ul>
     <h3>Virtual Pools:</h3>
     <ul>

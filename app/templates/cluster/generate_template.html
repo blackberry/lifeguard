@@ -1,0 +1,26 @@
+{% extends 'cluster/view.html' %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+{% block container %}
+    <form
+            method="POST"
+            action="{{ url_for('cluster_bp.gen_template', zone_number=cluster.zone.number, cluster_id=cluster.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <h3>Generate Template w/ Custom Vars</h3>
+        <strong>Variables:</strong>
+        <div>
+            <textarea name="vars" class="textarea_vars" wrap="off">{{ var_string }}</textarea>
+        </div>
+        <button type="submit" name="action" value="generate" class="btn btn-default">Generate</button>
+        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+    </form>
+    <br />
+    <h2>Template:</h2>
+    <br />
+    <pre>{{ template }}</pre>
+{% endblock %}

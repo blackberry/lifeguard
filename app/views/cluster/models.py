@@ -4,8 +4,6 @@ from sqlalchemy.schema import ForeignKeyConstraint
 from wtforms import StringField
 from wtforms.validators import InputRequired
 
-#from app.views.vpool.models import VirtualMachinePool
-
 
 class Cluster(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -37,13 +35,8 @@ class Cluster(db.Model):
     # Overwrite/add any additional
     for k, v in additional.items():
       parsed[k.strip()] = v.strip()
-
-    for k, v in parsed.items():
-      print("{}={}".format(k, v))
     return parsed
 
-  #def get_pools(self):
-  #  return VirtualMachinePool.query.filter_by(cluster=self).all()
 
   def __str__(self):
     return 'Cluster: id={}, name={}, zone_number={}, zone={}'.format(
@@ -53,6 +46,9 @@ class Cluster(db.Model):
     self.__str__()
 
 class ClusterTemplateForm(Form):
+  pass
+
+class GenerateTemplateForm(Form):
   pass
 
 

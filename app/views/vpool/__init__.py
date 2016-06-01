@@ -81,7 +81,6 @@ def   edit_template(pool_id):
 @vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
 def assign_to_pool(zone_number, cluster_id):
-  # Gather the collections and objects we'll need for managing orphaned VMs
   vms = []
   id_to_vm = {}
   selected_vm_ids = {}
@@ -94,8 +93,8 @@ def assign_to_pool(zone_number, cluster_id):
     cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
     one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
 
-    #for membership in PoolMembership.query.join(VirtualMachinePool).join(Cluster).all():
-    #  memberships[membership.vm_id] = membership
+    for membership in PoolMembership.query.join(VirtualMachinePool).filter_by(cluster=cluster).all():
+      memberships[membership.vm_id] = membership
 
 
     for vm in one_proxy.get_vms():
