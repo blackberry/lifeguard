@@ -1,22 +1,23 @@
 import sys, traceback
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
-from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolTemplateForm
+from jinja2 import Environment
+from app import db
+from app.one import OneProxy
+from app.views.template.models import ObjectLoader
+from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolTemplateForm, GenerateTemplateForm
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
-from app import db
-from app.one import OneProxy
 from datetime import datetime
 import timeit
 
-vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
+vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
 @vpool_bp.before_request
 def get_current_user():
   g.user = current_user
-
 
 
 @vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
@@ -75,6 +76,45 @@ def   edit_template(pool_id):
   return render_template('vpool/template.html',
                          form=form,
                          pool=pool)
+
+
+
+@vpool_bp.route('/vpool/<int:pool_id>/generate_template', methods=['GET', 'POST'])
+@login_required
+def gen_template(pool_id):
+  pool = VirtualMachinePool.query.get(pool_id)
+  zone = Zone.query.get(pool.cluster.zone.number)
+  cluster = Cluster.query.filter_by(zone=zone, id=pool.cluster.id).first()
+  pools = VirtualMachinePool.query.filter_by(cluster=cluster).all()
+  form = GenerateTemplateForm(request.form)
+  vars = {}
+  var_string = None
+  template = None
+  if request.method == 'POST':
+    if request.form['action'] == 'cancel':
+      flash('Cancelled template generation for pool {}'.format(pool.name), category="info")
+      return redirect(url_for('vpool_bp.view', pool_id=pool_id))
+    try:
+      var_string = request.form['vars']
+      for line in var_string.split("\n"):
+        k, v = line.split("=", 2)
+        vars[k] = v
+      vars = cluster.parsed_vars(vars)
+      obj_loader = ObjectLoader()
+      env = Environment(loader=obj_loader)
+      template = env.from_string(pool.template).render(pool=pool, cluster=cluster, vars=vars)
+      flash('Template Generated for {}'.format(pool.name))
+    except Exception as e:
+      raise e
+      #flash("Error generating template: {}".format(e), category='danger')
+  return render_template('vpool/generate_template.html',
+                         pool=pool,
+                         cluster=cluster,
+                         form=form,
+                         pools=pools,
+                         zone=zone,
+                         var_string=var_string,
+                         template=template)
 
 
 

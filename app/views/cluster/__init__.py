@@ -7,7 +7,7 @@ from app import db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
 from app.jira_api import JiraApi
-
+from app.views.template.models import ObjectLoader
 
 
 cluster_bp = Blueprint('cluster_bp', __name__, template_folder='templates')
@@ -15,6 +15,10 @@ cluster_bp = Blueprint('cluster_bp', __name__, template_folder='templates')
 
 def zone_template_loader(zone_number):
   return Zone.query.get(zone_number).template
+
+
+def object_template_loader(obj):
+  return object.template
 
 
 @cluster_bp.route('/cluster/<int:zone_number>/<int:cluster_id>', methods=['GET'])
@@ -78,7 +82,7 @@ def vm_create(zone_number, cluster_id):
         vars[k] = request.form[k]
       vars = cluster.parsed_vars(vars)
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-      obj_loader = FunctionLoader(zone_template_loader)
+      obj_loader = FunctionLoader(object_template_loader)
       env = Environment(loader=obj_loader)
       vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
       jira_api = JiraApi()
@@ -121,13 +125,13 @@ def gen_template(zone_number, cluster_id):
         k, v = line.split("=", 2)
         vars[k] = v
       vars = cluster.parsed_vars(vars)
-      obj_loader = FunctionLoader(zone_template_loader)
+      obj_loader = ObjectLoader()
       env = Environment(loader=obj_loader)
       template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
       flash('Template Generated for {}'.format(cluster.name))
     except Exception as e:
-      #raise e
-      flash("Error generating template: {}".format(e), category='danger')
+      raise e
+      #flash("Error generating template: {}".format(e), category='danger')
   return render_template('cluster/generate_template.html',
                          cluster=cluster,
                          form=form,

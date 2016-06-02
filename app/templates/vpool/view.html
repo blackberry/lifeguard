@@ -11,7 +11,7 @@
     <h3>Pool Actions</h3>
     <ul>
         <li><a href="{{ url_for('vpool_bp.edit_template', pool_id=pool.id) }}">Edit Template/Vars</a></li>
-
+        <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Generate Template</a></li>
     </ul>
     {{ super() }}
 {% endblock %}

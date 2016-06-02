@@ -14,6 +14,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'auth.login'
 
+from app.views.template import models
+
+
 from app.views.auth import auth_bp
 app.register_blueprint(auth_bp)
 

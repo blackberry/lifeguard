@@ -9,7 +9,6 @@ class User(db.Model):
   is_authenticated = True
   is_anonymous = False
   is_active = True
-
   username = db.Column(db.String(100))
 
   def __init__(self, username):

@@ -59,3 +59,7 @@ class PoolMembership(db.Model):
 class PoolTemplateForm(Form):
   template = TextAreaField('Zone Template')
   vars = TextAreaField('Zone Variables')
+
+
+class GenerateTemplateForm(Form):
+  pass
