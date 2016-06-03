@@ -11,8 +11,6 @@ class VirtualMachinePool(db.Model):
   zone_number = db.Column(db.Integer,  nullable=False)
   template = db.Column(db.Text())
   vars = db.Column(db.Text())
-
-
   cluster = db.relationship(
     'Cluster',
     primaryjoin="and_(VirtualMachinePool.cluster_id == Cluster.id, VirtualMachinePool.zone_number == Cluster.zone_number)",

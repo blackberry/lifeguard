@@ -22,22 +22,6 @@ class Cluster(db.Model):
     self.template = template
     self.vars=vars
 
-  def parsed_vars(self, additional=None):
-    parsed = {}
-    # Start with zone default variables
-    for var in self.zone.vars.split("\n"):
-      k, v = var.split("=", 2)
-      parsed[k.strip()] = v.strip()
-    # Overwrite/add with any defined for the cluster
-    for var in self.vars.split("\n"):
-      k, v = var.split("=", 2)
-      parsed[k.strip()] = v.strip()
-    # Overwrite/add any additional
-    for k, v in additional.items():
-      parsed[k.strip()] = v.strip()
-    return parsed
-
-
   def __str__(self):
     return 'Cluster: id={}, name={}, zone_number={}, zone={}'.format(
       self.id, self.name, self.zone_number, self.zone)

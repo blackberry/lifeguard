@@ -7,7 +7,7 @@ from app import db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
 from app.jira_api import JiraApi
-from app.views.template.models import ObjectLoader
+from app.views.template.models import ObjectLoader, VarParser
 
 
 cluster_bp = Blueprint('cluster_bp', __name__, template_folder='templates')
@@ -65,10 +65,7 @@ def vm_create(zone_number, cluster_id):
   zone = Zone.query.get(zone_number)
   cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
   pools = VirtualMachinePool.query.filter_by(cluster=cluster).all()
-  vars = {'hostname': None,
-          'cpu': None,
-          'vcpu': None,
-          'memory_megabytes': None}
+  vm_vars = {'hostname': None}
   vm_template = None
   form = CreateVmForm(request.form)
   if form.validate_on_submit():
@@ -76,18 +73,20 @@ def vm_create(zone_number, cluster_id):
       flash('Cancelled creating VM in {}'.format(cluster.name), category="info")
       return redirect(url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id))
     try:
-      for k, v in vars.items():
+      for k, v in vm_vars.items():
         if request.form[k] is None or request.form[k] == '':
           raise Exception('expected parameter {} is {}'.format(k, v))
-        vars[k] = request.form[k]
-      vars = cluster.parsed_vars(vars)
+        vm_vars[k] = request.form[k]
+      vars =  VarParser.parse_kv_strings_to_dict(
+        zone.vars,
+        cluster.vars,
+        vm_vars)
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
-      obj_loader = FunctionLoader(object_template_loader)
-      env = Environment(loader=obj_loader)
+      env = Environment(loader=ObjectLoader())
       vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
       jira_api = JiraApi()
       jira_api.connect()
-      new_issue = jira_api.instance.create_issue(
+      jira_api.instance.create_issue(
         project='IPGBD',
         summary='[auto] VM instantiated: {}'.format(vars['hostname']),
         description='Template: {}'.format(vm_template),
@@ -112,7 +111,6 @@ def gen_template(zone_number, cluster_id):
   cluster = Cluster.query.filter_by(zone=zone, id=cluster_id).first()
   pools = VirtualMachinePool.query.filter_by(cluster=cluster).all()
   form = GenerateTemplateForm(request.form)
-  vars = {}
   var_string = None
   template = None
   if request.method == 'POST':
@@ -121,12 +119,11 @@ def gen_template(zone_number, cluster_id):
       return redirect(url_for('cluster_bp.view', zone_number=zone.number, cluster_id=cluster.id))
     try:
       var_string = request.form['vars']
-      for line in var_string.split("\n"):
-        k, v = line.split("=", 2)
-        vars[k] = v
-      vars = cluster.parsed_vars(vars)
-      obj_loader = ObjectLoader()
-      env = Environment(loader=obj_loader)
+      vars = VarParser.parse_kv_strings_to_dict(
+        zone.vars,
+        cluster.vars,
+        var_string)
+      env = Environment(loader=ObjectLoader())
       template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
       flash('Template Generated for {}'.format(cluster.name))
     except Exception as e:

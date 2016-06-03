@@ -9,6 +9,7 @@ from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolTempl
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
+from app.views.template.models import VarParser
 from datetime import datetime
 import timeit
 
@@ -96,17 +97,20 @@ def gen_template(pool_id):
       return redirect(url_for('vpool_bp.view', pool_id=pool_id))
     try:
       var_string = request.form['vars']
-      for line in var_string.split("\n"):
-        k, v = line.split("=", 2)
-        vars[k] = v
-      vars = cluster.parsed_vars(vars)
-      obj_loader = ObjectLoader()
-      env = Environment(loader=obj_loader)
+      print('var_string: {}'.format(var_string))
+      vars = VarParser.parse_kv_strings_to_dict(
+        zone.vars,
+        cluster.vars,
+        pool.vars,
+        var_string
+      )
+      print('in view the vars are: {}'.format(vars))
+      env = Environment(loader=ObjectLoader())
       template = env.from_string(pool.template).render(pool=pool, cluster=cluster, vars=vars)
       flash('Template Generated for {}'.format(pool.name))
     except Exception as e:
-      raise e
-      #flash("Error generating template: {}".format(e), category='danger')
+      #raise e
+      flash("Error generating template: {}".format(e), category='danger')
   return render_template('vpool/generate_template.html',
                          pool=pool,
                          cluster=cluster,

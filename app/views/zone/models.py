@@ -17,15 +17,6 @@ class Zone(db.Model):
     self.session_string = session_string
     self.number = number
 
-  def parsed_vars(self, overwrite_vars=None):
-    parsed = {}
-    for var in self.vars.split("\n"):
-      k, v = var.split("=", 2)
-      parsed[k.strip()] = v.strip()
-    for k, v in overwrite_vars.items():
-      parsed[k.strip()] = v.strip()
-    return parsed
-
   def __str__(self):
     return 'Zone: number={}, name={}, xmlrpc_uri={}'.format(
       self.number, self.name, self.xmlrpc_uri)
