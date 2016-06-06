@@ -15,7 +15,7 @@
     <h3>Virtual Pools:</h3>
     <ul>
         {% for pool in pools %}
-            <li><a href="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}">{{ pool.name }}</a></li>
+            <li><a href="{{ url_for('vpool_bp.view', pool_id=pool.id) }}">{{ pool.name }}</a></li>
         {% else %}
             <li><i>No pools</i></li>
         {% endfor %}

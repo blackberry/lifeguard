@@ -1,0 +1,21 @@
+{% extends "vpool/view.html" %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <h3>Confirm Delete:</h3>
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <p>Are you sure you want to permanently delete pool {{ pool.name }}?</p>
+        <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;
+        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+    </form>
+{% endblock %}

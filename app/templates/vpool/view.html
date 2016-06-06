@@ -7,21 +7,37 @@
     / {{ pool.name }}
 {% endblock %}
 
+{% set memberships = pool.get_memberships() %}
+
 {% block menu %}
-    <h3>Pool Actions</h3>
+    <h3>Pool Actions:</h3>
     <ul>
-        <li><a href="{{ url_for('vpool_bp.edit_template', pool_id=pool.id) }}">Edit Template/Vars</a></li>
+        <li><a href="{{ url_for('vpool_bp.edit', pool_id=pool.id) }}">Edit Pool</a></li>
+        <li><a href="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}">Delete Pool</a></li>
         <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Generate Template</a></li>
+        {% if memberships|length > pool.cardinality %}
+            <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ memberships|length - pool.cardinality }} VMs too many)</span></li>
+        {%  elif memberships|length < pool.cardinality %}
+            <li><a href="{{ url_for('vpool_bp.expand', pool_id=pool.id) }}">Expand</a> <span class="red">({{ pool.cardinality - memberships|length }} VMs missing)</span></li>
+        {% endif %}
+    </ul>
+    <h3>Cluster Pools:</h3>
+    <ul>
+        {% for peer_pool in pool.get_peer_pools() %}
+            <li><a href="{{ url_for('vpool_bp.view', pool_id=peer_pool.id) }}">{{ peer_pool.name }}</a></li>
+        {% else %}
+            <li><i>No pools</i></li>
+        {% endfor %}
     </ul>
     {{ super() }}
 {% endblock %}
 
 {% block container %}
     <h3>Pool Member List: </h3>
-{% if pool.get_memberships()|length > 0 %}
+{% if memberships|length > 0 %}
     <form
             method="POST"
-            action="{{ url_for('vpool_bp.view_pool', pool_id=pool.id) }}"
+            action="{{ url_for('vpool_bp.view', pool_id=pool.id) }}"
             role="form">
     <table id="vm_list">
         <tr class="rom_row">
@@ -40,7 +56,7 @@
             <th class="data-cell">MEM</th>
             <th class="data-cell">IP Address</th>
         </tr>
-        {% for membership in pool.get_memberships() %}
+        {% for membership in memberships %}
             <tr id="row_vm_id_{{ membership.vm_id }}">
                 <td>
                     <input class="counted" name="chk_vm_id" type="checkbox"

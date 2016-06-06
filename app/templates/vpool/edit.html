@@ -8,10 +8,35 @@
 {% block container %}
     <form
             method="POST"
-            action="{{ url_for('vpool_bp.edit_template', pool_id=pool.id) }}"
+            action="{{ url_for('vpool_bp.edit', pool_id=pool.id) }}"
             role="form">
         {{ form.csrf_token }}
-        <h3>Edit Pool Template and Variables</h3>
+        <h3>Edit Pool: {{ pool.name }}</h3>
+        <br />
+        <table>
+            <tr>
+                <td class="form-label">
+                    {{ form.name.label }}:
+                </td>
+                <td>
+                    {{ form.name() }}
+                    {% for error in form.errors.name %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td class="form-label">
+                    {{ form.cardinality.label }}:
+                </td>
+                <td>
+                    {{ form.cardinality() }}
+                    {% for error in form.errors.cardinality %}
+                        <span style="color: red;">{{ error }}</span><br/>
+                    {% endfor %}
+                </td>
+            </tr>
+        </table>
         <table width="100%">
             <tr>
                 <td width="60%">
