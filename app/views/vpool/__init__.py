@@ -5,12 +5,15 @@ from jinja2 import Environment
 from app import db
 from app.one import OneProxy, INCLUDING_DONE
 from app.views.template.models import ObjectLoader
-from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolEditForm, GenerateTemplateForm
+from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolEditForm, GenerateTemplateForm, ExpandException
 from app.views.common.models import ActionForm
 from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
 from app.views.template.models import VarParser
+from app.jira_api import JiraApi
 from datetime import datetime
+from flask.ext.login import current_user
+
 import timeit
 import re
 
@@ -29,75 +32,109 @@ def test(pool_id):
   return render_template('vpool/test.html', pool=pool)
 
 
+@vpool_bp.route('/vpool/shrink/<int:pool_id>', methods=['GET', 'POST'])
+@login_required
+def shrink(pool_id):
+  pool = members = member_vms_by_num = new_names_by_num = None
+  form = ActionForm()
+  jira_api = JiraApi()
+  jira_api.connect()
+  try:
+    pool = VirtualMachinePool.query.get(pool_id)
+    shrink_names_by_num, member_vms_by_num, members, numbers = pool.get_shrink_collections()
+  except Exception as e:
+    flash("There was an error determining new names required for shrinking: {}".format(e))
+    return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+  if request.method == 'POST' and form.validate():
+    shrink_ticket = None
+    try:
+      if request.form['action'] == 'cancel':
+        flash('Shrinking of {} cancelled'.format(pool.name), category='info')
+        return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+      elif request.form['action'] == 'confirm':
+        form_new_names = request.form.getlist('shrink_hostname_list')
+        flash(form_new_names, category='info')
+    except Exception as e:
+      flash("Error: {}".format(e), category='danger')
+
+  return render_template('vpool/shrink.html',
+                         form=form,
+                         pool=pool,
+                         numbers=numbers,
+                         member_vms_by_num=member_vms_by_num,
+                         shrink_names_by_num=new_names_by_num)
+
+
+
 @vpool_bp.route('/vpool/expand/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def expand(pool_id):
-  pool = None
-  members = None
-  member_vms_by_num = {}
+  pool = members = member_vms_by_num = new_names_by_num = None
   form = ActionForm()
+  jira_api = JiraApi()
+  jira_api.connect()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    members = pool.get_memberships()
-
-    start_time = timeit.default_timer()
+    new_names_by_num, member_vms_by_num, members, numbers = pool.get_expansion_collections()
   except Exception as e:
-    flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
-  if (len(members) == pool.cardinality):
-    flash("Cannot expand {} ({}/{} members already exist)".format(pool.name, len(members), pool.cardinality))
-    return redirect(url_for('vpool.view', pool_id=pool.id))
-  if (len(members) > pool.cardinality):
-    flash("Cannot expand {} ({}/{} members, need to shrink)".format(pool.name, len(members), pool.cardinality))
-    return redirect(url_for('vpool.view', pool_id=pool.id))
-
-
-  member_vms_by_num = pool.get_member_vms_by_num()
-
-  for k, v in member_vms_by_num.items():
-    print("member: {} = {}".format(k, v.name))
-
-
-  new_names_by_num = {}
-  for number in range(1, pool.cardinality + 1):
-    if number not in member_vms_by_num:
-      new_name = pool.name_for_number(number)
-      new_names_by_num[int(number)] = new_name
-      print("number: {} not in member_vms_by_num, adding value: {}".format(number, new_name))
-
-  needed = pool.cardinality - len(member_vms_by_num)
-
-  if len(new_names_by_num) != needed:
-    for k, v in new_names_by_num.items():
-      print(k, v)
-    raise Exception("Error: needed {} new VMs but could only infer {} misssing names".format(needed, len(new_names_by_num)))
-
-  numbers = {}
-
-  for number in range(1, pool.cardinality + 1):
-    if number in new_names_by_num and number in member_vms_by_num:
-      raise Exception("VM number {} found in members and new names".format(number))
-    if number not in new_names_by_num and number not in member_vms_by_num:
-      raise Exception("VM number {} not found in members or new names".format(number))
-    numbers[number] = number
-
-
+    flash("There was an error determining new names required for expansion: {}".format(e))
+    return redirect(url_for('vpool_bp.view', pool_id=pool.id))
   if request.method == 'POST' and form.validate():
+    expansion_ticket = None
     try:
       if request.form['action'] == 'cancel':
-        flash('Delete {} action cancelled'.format(pool.name), category='info')
+        flash('Expansion of {} cancelled'.format(pool.name), category='info')
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
       elif request.form['action'] == 'confirm':
-        redirect_url = url_for('cluster_bp.view', zone_number=pool.cluster.zone.number, cluster_id=pool.cluster.id)
-        members = pool.get_memberships()
-        for member in members:
-          db.session.delete(member)
-        db.session.delete(pool)
-        db.session.commit()
-        flash('Deleted pool {} with {} memberse'.format(pool.name, len(members)), category='success')
-        return redirect(url_for('cluster_bp.view', zone_number=pool.cluster.zone.number, cluster_id=pool.cluster.id))
+        form_new_names = request.form.getlist('new_hostname_list')
+        if len(form_new_names) != len(new_names_by_num):
+          raise("The expansion form was submitted with {} hostnames but there are now "
+                "{} required after the form was submitted".format(len(form_new_names), len(new_names_by_num)))
+        for name in form_new_names:
+          new_num = VirtualMachinePool.get_num_from_name(name)
+          if new_num not in new_names_by_num:
+            raise ExpandException("Form contained a new name ({}) but number {} is no longer required".format(
+              name, new_num))
+        # All reasonalbe checks are performed, let's instantiate!
+        expansion_ticket = jira_api.instance.create_issue(
+          project='IPGBD',
+          summary='[auto-{}] Pool Expansion: {} ({} to {})'.format(
+            current_user.username, pool.name, len(members), pool.cardinality),
+          description="Pool expansion triggered that will instantiate {} new VM(s): \n\n*{}".format(
+            len(form_new_names),
+            "\n*".join(form_new_names)),
+          customfield_13842=jira_api.get_datetime_now(),
+          issuetype={'name': 'Task'})
+        env = Environment(loader=ObjectLoader())
+        one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
+        new_members = []
+        try:
+          for hostname in form_new_names:
+            vars =  VarParser.parse_kv_strings_to_dict(
+              pool.cluster.zone.vars,
+              pool.cluster.vars,
+              pool.vars,
+              'hostname={}'.format(hostname))
+            vm_template = env.from_string(pool.template).render(pool=pool, vars=vars)
+            vm_id = one_proxy.create_vm(template=vm_template)
+            new_member = PoolMembership(pool=pool, vm_id=vm_id, date_added=datetime.utcnow())
+            db.session.add(new_member)
+            new_members.append(new_member)
+          db.session.commit()
+        except Exception as e:
+          try:
+            for member in new_members:
+              one_proxy.action_vm("delete", member.vm_id)
+          except Exception as e:
+            flash("VM cleanup of vm_id={} failed after pool expansion failed".format(member.vm_id))
+          raise e
+        flash("Expanded pool {} under ticket {}".format(pool.name, expansion_ticket.id))
+        return redirect(url_for('vpool_bp.view', pool_id=pool.id))
     except Exception as e:
-      #raise e
-      flash('There was an error deleting pool {}: {}'.format(pool.name, e), category='danger')
+      defect_ticket = jira_api.defect_for_exception("Pool Expansion Failed", e)
+      flash(Markup('Error expanding pool {} (defect ticket contains exception: {})'.format(
+        pool.name, JiraApi.ticket_link(defect_ticket))), category='danger')
+
       return redirect(url_for('vpool_bp.view', pool_id=pool.id))
   return render_template('vpool/expand.html',
                          form=form,

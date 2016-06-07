@@ -67,6 +67,9 @@ body {
     padding-top: 20px;
 }
 
+.lowlight {
+    color: #adadad;
+}
 
 .red {
     color: #e50000;
