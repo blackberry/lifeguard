@@ -1,0 +1,32 @@
+{% extends "vpool/view.html" %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <h3>Confirm Shrink:</h3>
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.shrink', pool_id=pool.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <p>Are you sure you want to shrink pool {{ pool.name }}?</p>
+        <p>The highlighted hostnames will be shutdown to shrink the pool to it's cardinality:</p>
+        <ul>
+        {%  for number in member_vms_by_num %}
+            {% if number in shrink_names_by_num %}
+                <input type="hidden" name="shrink_hostname_list" value="{{ shrink_names_by_num[number].name }}" />
+                <li><strong>{{ shrink_names_by_num[number].name }}</strong></li>
+            {% else %}
+                <li class="lowlight">{{ member_vms_by_num[number].name }}</li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+        <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;
+        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+    </form>
+{% endblock %}

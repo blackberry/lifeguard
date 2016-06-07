@@ -16,7 +16,7 @@
         <li><a href="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}">Delete Pool</a></li>
         <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Generate Template</a></li>
         {% if memberships|length > pool.cardinality %}
-            <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ memberships|length - pool.cardinality }} VMs too many)</span></li>
+            <li><a href="{{ url_for('vpool_bp.shrink', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ memberships|length - pool.cardinality }} VMs too many)</span></li>
         {%  elif memberships|length < pool.cardinality %}
             <li><a href="{{ url_for('vpool_bp.expand', pool_id=pool.id) }}">Expand</a> <span class="red">({{ pool.cardinality - memberships|length }} VMs missing)</span></li>
         {% endif %}

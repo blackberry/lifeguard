@@ -67,13 +67,27 @@ class VirtualMachinePool(db.Model):
         if num is not None:
           vms_by_num[num] = vm
         else:
-          raise Exception("Cannot determine number from name {}".format(name))
+          raise Exception("Cannot determine number from name {}".format(vm.name))
     return vms_by_num
+
+  def get_member_vms_by_vm_ids(self):
+    memberships_by_vm_id = self.get_memberships_by_vm_id()
+    vms_by_vm_id = {}
+    one_proxy = OneProxy(self.cluster.zone.xmlrpc_uri, self.cluster.zone.session_string, verify_certs=False)
+    for vm in one_proxy.get_vms(INCLUDING_DONE):
+      if vm.id in memberships_by_vm_id:
+        num = VirtualMachinePool.get_num_from_name(vm.name)
+        if num is not None:
+          vms_by_vm_id[vm.id] = vm
+        else:
+          raise Exception("Cannot determine number from name {}".format(vm.name))
+    return vms_by_vm_id
+
 
   def get_cluster(self):
     return Cluster.query.filter_by(zone_number=self.zone_number, id=self.cluster_id).first()
 
-  def get_shrink_collections(self):
+  def get_shrink_collections(self, audit_vm_ids=None):
     members = self.get_memberships()
     if (len(members) == self.cardinality):
       raise ExpandException("Cannot shrink {} ({}/{} members already exist)".format(
@@ -81,11 +95,14 @@ class VirtualMachinePool(db.Model):
     if (len(members) < self.cardinality):
       raise ExpandException("Cannot shrink {} ({}/{} members, need to expand)".format(
         self.name, len(members), self.cardinality))
+
+    # TODO: fix: If we continue down this road we'll have hit the ONE api twice for the same VM list...
     member_vms_by_num = self.get_member_vms_by_num()
 
     sorted_existing_numbers = list(member_vms_by_num.keys())
     sorted_existing_numbers.sort()
-    shrink_names_by_number = {}
+
+    shutdown_vm_ids = []
     num_to_shrink_by = len(members) - self.cardinality
     for i in range(0, num_to_shrink_by):
       num_to_shrink = sorted_existing_numbers.pop()

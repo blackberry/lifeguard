@@ -39,12 +39,21 @@ def shrink(pool_id):
   form = ActionForm()
   jira_api = JiraApi()
   jira_api.connect()
+
+  audit_vm_ids = None
+  # Quickly get the VM_IDs to shutdown if form was submitted
+  if request.method == 'POST' and form.validate():
+    audit_vm_ids = {}
+    for vm_id in  request.form.getlist('vm_ids_to_shutdown'):
+      audit_vm_ids[vm_id] = vm_id
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    shrink_names_by_num, member_vms_by_num, members, numbers = pool.get_shrink_collections()
+    shutdown_vm_ids, member_vms_by_num, members, numbers = pool.get_shrink_collections(audit_vm_ids)
   except Exception as e:
     flash("There was an error determining new names required for shrinking: {}".format(e))
     return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+
+
   if request.method == 'POST' and form.validate():
     shrink_ticket = None
     try:
@@ -52,8 +61,30 @@ def shrink(pool_id):
         flash('Shrinking of {} cancelled'.format(pool.name), category='info')
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
       elif request.form['action'] == 'confirm':
-        form_new_names = request.form.getlist('shrink_hostname_list')
-        flash(form_new_names, category='info')
+        form_shrink_names = request.form.getlist('shrink_hostname_list')
+        if len(form_shrink_names) != len(shrink_names_by_num):
+          raise Exception("The form submission identified {} VM(s) to shutdown however {} VM(s) are now needed to be shutdown".format(
+            len(form_shrink_names), len(shrink_names_by_num)))
+        for name in form_shrink_names:
+          num = VirtualMachinePool.get_num_from_name(name)
+          if num not in shrink_names_by_num:
+            raise Exception("Host number {} no longer needing to be shutdown since form was submitted")
+        shrink_ticket = jira_api.instance.create_issue(
+          project='IPGBD',
+          summary='[auto-{}] Pool Shrink: {} ({} to {})'.format(
+            current_user.username, pool.name, len(members), pool.cardinality),
+          description="Pool shrink triggered that will shutdown {} VM(s): \n\n*{}".format(
+            len(form_shrink_names),
+            "\n*".join(form_shrink_names)),
+          customfield_13842=jira_api.get_datetime_now(),
+          issuetype={'name': 'Task'})
+        one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
+
+        for num in shrink_names_by_num:
+          one_proxy.action_vm("shutdown", shrink_names_by_num[num])
+
+
+
     except Exception as e:
       flash("Error: {}".format(e), category='danger')
 
@@ -62,7 +93,7 @@ def shrink(pool_id):
                          pool=pool,
                          numbers=numbers,
                          member_vms_by_num=member_vms_by_num,
-                         shrink_names_by_num=new_names_by_num)
+                         shrink_names_by_num=shrink_names_by_num)
 
 
 
