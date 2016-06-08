@@ -28,73 +28,118 @@ def get_current_user():
 @vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def test(pool_id):
+  form = ActionForm()
+  jira = JiraApi()
+  jira.connect()
   pool = VirtualMachinePool.query.get(pool_id)
   return render_template('vpool/test.html', pool=pool)
+
+
+@vpool_bp.route('/vpool/remove_done/<int:pool_id>', methods=['GET', 'POST'])
+@login_required
+def remove_done(pool_id):
+  form = ActionForm()
+  jira = JiraApi()
+  jira.connect()
+  pool = one_proxy = members = None
+  try:
+    pool = VirtualMachinePool.query.get(pool_id)
+    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
+    members = pool.get_memberships(one_proxy.get_vms(INCLUDING_DONE))
+  except Exception as e:
+    flash("There was an error finshed VMs: {}".format(e), category='danger')
+    return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+  if request.method == 'POST' and form.validate():
+    try:
+      if request.form['action'] == 'cancel':
+        flash('Cleanup of {} cancelled'.format(pool.name), category='info')
+        return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+      elif request.form['action'] == 'confirm':
+        vm_ids_to_delete = [int(id) for id in  request.form.getlist('done_vm_ids')]
+        delete_members = []
+        for m in members:
+          if m.vm.id in vm_ids_to_delete:
+            delete_members.append(m)
+        delete_ticket = jira.instance.create_issue(
+          project='IPGBD',
+          summary='[auto-{}] Pool Cleanup: {} (deleting {} done VMs)'.format(
+            current_user.username, pool.name, len(vm_ids_to_delete)),
+          description="Pool cleanup triggered that will delete {} VM(s): \n\n*{}".format(
+            len(vm_ids_to_delete),
+            "\n*".join(['ID {}: {} ({})'.format(m.vm.id, m.vm.name, m.vm.ip_address) for m in delete_members])),
+          customfield_13842=jira.get_datetime_now(),
+          issuetype={'name': 'Task'})
+        one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
+        for m in delete_members:
+          one_proxy.action_vm("delete", m.vm.id)
+          db.session.delete(m)
+        db.session.commit()
+        flash('Deleted {} done VMs to cleanup pool {}'.format(len(delete_members), pool.name))
+        return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+    except Exception as e:
+      flash("Error performing cleanup of pool {}: {}".format(pool.name, e), category='danger')
+      jira.defect_for_exception("Error during cleanup of pool {}".format(pool.name), e)
+      return redirect(url_for('vpool_bp.view', pool_id=pool.id))
+  return render_template('vpool/remove_done.html',
+                         form=form,
+                         pool=pool,
+                         members=members)
+
+
 
 
 @vpool_bp.route('/vpool/shrink/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def shrink(pool_id):
-  pool = members = member_vms_by_num = new_names_by_num = None
+  pool = one_proxy = members = shrink_vm_ids = None
   form = ActionForm()
-  jira_api = JiraApi()
-  jira_api.connect()
-
-  audit_vm_ids = None
-  # Quickly get the VM_IDs to shutdown if form was submitted
-  if request.method == 'POST' and form.validate():
-    audit_vm_ids = {}
-    for vm_id in  request.form.getlist('vm_ids_to_shutdown'):
-      audit_vm_ids[vm_id] = vm_id
+  jira = JiraApi()
+  jira.connect()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    shutdown_vm_ids, member_vms_by_num, members, numbers = pool.get_shrink_collections(audit_vm_ids)
+    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
+    vms = one_proxy.get_vms(INCLUDING_DONE)
+    members = pool.get_memberships(vms)
+    if request.method == 'POST' and form.validate():
+      shrink_vm_ids = [int(id) for id in  request.form.getlist('shrink_vm_ids')]
+    shrink_members = pool.get_members_to_shrink(members, shrink_vm_ids)
+    if shrink_members is None or len(shrink_members) == 0:
+      raise Exception("Cannot determine any members to shutdown for shrinking")
   except Exception as e:
-    flash("There was an error determining new names required for shrinking: {}".format(e))
+    flash("There was an error determining memberships for shrinking: {}".format(e), category='danger')
     return redirect(url_for('vpool_bp.view', pool_id=pool.id))
-
-
   if request.method == 'POST' and form.validate():
-    shrink_ticket = None
     try:
       if request.form['action'] == 'cancel':
-        flash('Shrinking of {} cancelled'.format(pool.name), category='info')
+        flash('Shrinking {} cancelled'.format(pool.name), category='info')
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
       elif request.form['action'] == 'confirm':
-        form_shrink_names = request.form.getlist('shrink_hostname_list')
-        if len(form_shrink_names) != len(shrink_names_by_num):
-          raise Exception("The form submission identified {} VM(s) to shutdown however {} VM(s) are now needed to be shutdown".format(
-            len(form_shrink_names), len(shrink_names_by_num)))
-        for name in form_shrink_names:
-          num = VirtualMachinePool.get_num_from_name(name)
-          if num not in shrink_names_by_num:
-            raise Exception("Host number {} no longer needing to be shutdown since form was submitted")
-        shrink_ticket = jira_api.instance.create_issue(
+        vm_ids_to_shutdown = request.form.getlist('shrink_vm_ids')
+        shrink_ticket = jira.instance.create_issue(
           project='IPGBD',
           summary='[auto-{}] Pool Shrink: {} ({} to {})'.format(
             current_user.username, pool.name, len(members), pool.cardinality),
           description="Pool shrink triggered that will shutdown {} VM(s): \n\n*{}".format(
-            len(form_shrink_names),
-            "\n*".join(form_shrink_names)),
-          customfield_13842=jira_api.get_datetime_now(),
+            len(vm_ids_to_shutdown),
+            "\n*".join(['ID {}: {} ({})'.format(m.vm.id, m.vm.name, m.vm.ip_address) for m in shrink_members])),
+          customfield_13842=jira.get_datetime_now(),
           issuetype={'name': 'Task'})
         one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
-
-        for num in shrink_names_by_num:
-          one_proxy.action_vm("shutdown", shrink_names_by_num[num])
-
-
-
+        for m in shrink_members:
+          one_proxy.action_vm("shutdown", m.vm.id)
+          db.session.delete(m)
+        db.session.commit()
+        flash('Shutdown {} VMs to shrink pool {} to cardinality of {}'.format(
+          len(shrink_members), pool.name, pool.cardinality))
+        return redirect(url_for('vpool_bp.view', pool_id=pool.id))
     except Exception as e:
-      flash("Error: {}".format(e), category='danger')
-
+      flash("Error shrinking pool {}: {}".format(pool.name, e), category='danger')
+      jira.defect_for_exception("Error shrinking pool {}".format(pool.name), e)
+      return redirect(url_for('vpool_bp.view', pool_id=pool.id))
   return render_template('vpool/shrink.html',
                          form=form,
                          pool=pool,
-                         numbers=numbers,
-                         member_vms_by_num=member_vms_by_num,
-                         shrink_names_by_num=shrink_names_by_num)
-
+                         shrink_members=shrink_members)
 
 
 @vpool_bp.route('/vpool/expand/<int:pool_id>', methods=['GET', 'POST'])
@@ -185,17 +230,14 @@ def view(pool_id):
     pool = VirtualMachinePool.query.get(pool_id)
     one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
     start_time = timeit.default_timer()
-    for vm in one_proxy.get_vms(INCLUDING_DONE):
-      if vm.disk_cluster is not None and vm.disk_cluster.id == pool.cluster.id:
-        vms_by_id[vm.id] = vm
-    flash('fetched {} vms in {} seconds'.format(len(vms_by_id), timeit.default_timer() - start_time))
+    members = pool.get_memberships(vms = one_proxy.get_vms(INCLUDING_DONE))
   except Exception as e:
     traceback.print_exc(file=sys.stdout)
     flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
   return render_template('vpool/view.html',
                          form=form,
                          pool=pool,
-                         vms_by_id=vms_by_id)
+                         members=members)
 
 
 @vpool_bp.route('/vpool/delete/<int:pool_id>', methods=['GET', 'POST'])

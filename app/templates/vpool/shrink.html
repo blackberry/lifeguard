@@ -15,15 +15,11 @@
             role="form">
         {{ form.csrf_token }}
         <p>Are you sure you want to shrink pool {{ pool.name }}?</p>
-        <p>The highlighted hostnames will be shutdown to shrink the pool to it's cardinality:</p>
+        <p>The below hostnames will be shutdown to shrink the pool to it's cardinality:</p>
         <ul>
-        {%  for number in member_vms_by_num %}
-            {% if number in shrink_names_by_num %}
-                <input type="hidden" name="shrink_hostname_list" value="{{ shrink_names_by_num[number].name }}" />
-                <li><strong>{{ shrink_names_by_num[number].name }}</strong></li>
-            {% else %}
-                <li class="lowlight">{{ member_vms_by_num[number].name }}</li>
-            {% endif %}
+        {%  for member in shrink_members %}
+            <input type="hidden" name="shrink_vm_ids" value="{{ member.vm.id}}" />
+            <li>ID: {{ member.vm.id }}: {{ member.vm.name }} ({{ member.vm.ip_address }})</li>
         {% endfor %}
         </ul>
         <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;

@@ -220,12 +220,11 @@ class OneProxy:
     else:
       return response[1]
 
-  def action_vm(self, action, vm_id, hold=False):
+  def action_vm(self, action, vm_id):
     """
     Performs an action on a VM
     :param action:
     :param vm_id:
-    :param hold:
     :return:
     """
     if action not in ["shutdown",
@@ -247,7 +246,7 @@ class OneProxy:
       "undeploy",
       "undeploy-hard"]:
       raise Exception("Unknown action: {}".format(action))
-    response = self.proxy.one.vm.action(self.session_string, action, hold)
+    response = self.proxy.one.vm.action(self.session_string, action, vm_id)
     if response[0] is not True:
       raise (Exception("one.vm.action failed (error code: {}) {} action={}, vm_id={}".format(
         response[2],

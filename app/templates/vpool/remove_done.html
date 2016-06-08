@@ -1,0 +1,30 @@
+{% extends "vpool/view.html" %}
+{% block page_title %}
+    {{ super() }}
+{% endblock %}
+
+{% block menu %}
+    {{ super() }}
+{% endblock %}
+
+{% block container %}
+    <h3>Removed Finished/Done VMs:</h3>
+    <form
+            method="POST"
+            action="{{ url_for('vpool_bp.remove_done', pool_id=pool.id) }}"
+            role="form">
+        {{ form.csrf_token }}
+        <p>Are you sure you want to remove the following done VMs in {{ pool.name }}?</p>
+        <p>The below VMs will be deleted in ONE:</p>
+        <ul>
+        {%  for member in members %}
+            {%  if member.is_done() %}
+                <input type="hidden" name="done_vm_ids" value="{{ member.vm.id}}" />
+                <li>State: <strong>{{ member.vm.state }}</strong> for ID: {{ member.vm.id }}: {{ member.vm.name }} ({{ member.vm.ip_address }})</li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+        <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;
+        <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
+    </form>
+{% endblock %}

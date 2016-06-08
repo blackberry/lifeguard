@@ -7,18 +7,20 @@
     / {{ pool.name }}
 {% endblock %}
 
-{% set memberships = pool.get_memberships() %}
-
 {% block menu %}
     <h3>Pool Actions:</h3>
     <ul>
+        {% set cleanuprequried = pool.num_done_vms(members) %}
         <li><a href="{{ url_for('vpool_bp.edit', pool_id=pool.id) }}">Edit Pool</a></li>
         <li><a href="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}">Delete Pool</a></li>
         <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Generate Template</a></li>
-        {% if memberships|length > pool.cardinality %}
-            <li><a href="{{ url_for('vpool_bp.shrink', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ memberships|length - pool.cardinality }} VMs too many)</span></li>
-        {%  elif memberships|length < pool.cardinality %}
-            <li><a href="{{ url_for('vpool_bp.expand', pool_id=pool.id) }}">Expand</a> <span class="red">({{ pool.cardinality - memberships|length }} VMs missing)</span></li>
+        {% if members|length > pool.cardinality %}
+            <li><a href="{{ url_for('vpool_bp.shrink', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ members|length - pool.cardinality }} VMs too many)</span></li>
+        {%  elif members|length < pool.cardinality %}
+            <li><a href="{{ url_for('vpool_bp.expand', pool_id=pool.id) }}">Expand</a> <span class="red">({{ pool.cardinality - members|length }} VMs missing)</span></li>
+        {% endif %}
+        {% if cleanuprequried > 0 %}
+            <li><a href="{{ url_for('vpool_bp.remove_done', pool_id=pool.id) }}">Cleanup</a> <span class="red">({{ cleanuprequried }} VMs are done)</span></li>
         {% endif %}
     </ul>
     <h3>Cluster Pools:</h3>
@@ -34,7 +36,7 @@
 
 {% block container %}
     <h3>Pool Member List: </h3>
-{% if memberships|length > 0 %}
+{% if members|length > 0 %}
     <form
             method="POST"
             action="{{ url_for('vpool_bp.view', pool_id=pool.id) }}"
@@ -56,23 +58,19 @@
             <th class="data-cell">MEM</th>
             <th class="data-cell">IP Address</th>
         </tr>
-        {% for membership in memberships %}
-            <tr id="row_vm_id_{{ membership.vm_id }}">
+        {% for member in members %}
+            <tr id="row_vm_id_{{ member.vm.id }}">
                 <td>
                     <input class="counted" name="chk_vm_id" type="checkbox"
-                           value="{{ membership.vm_id }}" id="chk_vm_id_{{ membership.vm_id }}">
+                           value="{{ member.vm.id }}" id="chk_vm_id_{{ member.vm.id }}">
                 </td>
-                {% if membership.vm_id in vms_by_id %}
-                    <td class="data-cell">{{ membership.vm_id }}</td>
-                    <td id="vm_id_{{ membership.vm_id }}" class="data-cell filterable">{{ vms_by_id[membership.vm_id].name }}</td>
-                    <td class="data-cell">{{ vms_by_id[membership.vm_id].disk_cluster.name }}</td>
-                    <td class="data-cell">{{ vms_by_id[membership.vm_id].state_desc() }}</td>
-                    <td class="data-cell">{{ vms_by_id[membership.vm_id].cpu }}</td>
-                    <td class="data-cell">{{ vms_by_id[membership.vm_id].memory_gb() }}</td>
-                    <td class="data-cell">{{ vms_by_id[membership.vm_id].ip_address }}</td>
-                {% else %}
-                    <td colspan="7">WARNING: VM ID {{ membership.vm_id }} not found in cluster {{ pool.cluster.name }}!</td>
-                {% endif %}
+                <td class="data-cell">{{ member.vm.id }}</td>
+                <td id="vm_id_{{ member.vm.id }}" class="data-cell filterable">{{ member.vm.name }}</td>
+                <td class="data-cell">{{ member.vm.disk_cluster.name }}</td>
+                <td class="data-cell">{{ member.vm.state_desc() }}</td>
+                <td class="data-cell">{{ member.vm.cpu }}</td>
+                <td class="data-cell">{{ member.vm.memory_gb() }}</td>
+                <td class="data-cell">{{ member.vm.ip_address }}</td>
             </tr>
         {% endfor %}
     </table>

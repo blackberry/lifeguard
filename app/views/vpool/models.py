@@ -32,13 +32,32 @@ class VirtualMachinePool(db.Model):
     self.zone_number = zone_number
     self.cardinality = cardinality
 
-  def get_memberships(self):
-    return PoolMembership.query.filter_by(pool=self).all()
+  def __str__(self):
+    return 'VirtualMachinePool: id={}, name={}, cluster_id={}, cluster={}, ' \
+           'zone_number={}, template={}, vars={}, cardinality={}'.format(
+      self.id,
+      self.name,
+      self.cluster_id,
+      self.cluster,
+      self.zone_number,
+      self.template,
+      self.vars,
+      self.cardinality)
 
-  def get_memberships_by_vm_id(self):
-    memberships = {}
-    for membership in self.get_memberships():
-      memberships[membership.vm_id] = membership
+  def __repr__(self):
+    self.__str__()
+
+  def get_memberships(self, vms=None):
+    """
+    Get the PoolMembership objects that are associated with the pool
+    :param vms: If a collection of VMs is provided, the vm attribute of member is assigned
+    :return:
+    """
+    memberships =  PoolMembership.query.filter_by(pool=self).all()
+    if vms is not None:
+      vms_dict = {vm.id: vm for vm in vms}
+      for m in memberships:
+        m.vm = vms_dict[m.vm_id]
     return memberships
 
   def name_for_number(self, number):
@@ -48,71 +67,30 @@ class VirtualMachinePool(db.Model):
       raise Exception("Failed to parse pool name for hostname of number: {}".format(number))
     return '{}{}.{}'.format(match.group(1), number, match.group(2))
 
-  @staticmethod
-  def get_num_from_name(name):
-    num_pattern = re.compile("^[^\.]+(\d+)\.")
-    match = num_pattern.match(name)
-    if match is not None:
-      return int(match.group(1))
-    else:
-      return None
-
-  def get_member_vms_by_num(self):
-    memberships_by_vm_id = self.get_memberships_by_vm_id()
-    vms_by_num = {}
-    one_proxy = OneProxy(self.cluster.zone.xmlrpc_uri, self.cluster.zone.session_string, verify_certs=False)
-    for vm in one_proxy.get_vms(INCLUDING_DONE):
-      if vm.id in memberships_by_vm_id:
-        num = VirtualMachinePool.get_num_from_name(vm.name)
-        if num is not None:
-          vms_by_num[num] = vm
-        else:
-          raise Exception("Cannot determine number from name {}".format(vm.name))
-    return vms_by_num
-
-  def get_member_vms_by_vm_ids(self):
-    memberships_by_vm_id = self.get_memberships_by_vm_id()
-    vms_by_vm_id = {}
-    one_proxy = OneProxy(self.cluster.zone.xmlrpc_uri, self.cluster.zone.session_string, verify_certs=False)
-    for vm in one_proxy.get_vms(INCLUDING_DONE):
-      if vm.id in memberships_by_vm_id:
-        num = VirtualMachinePool.get_num_from_name(vm.name)
-        if num is not None:
-          vms_by_vm_id[vm.id] = vm
-        else:
-          raise Exception("Cannot determine number from name {}".format(vm.name))
-    return vms_by_vm_id
-
+  def num_done_vms(self, members):
+    done = 0
+    for m in members:
+      if m.is_done():
+        done += 1
+    return done
 
   def get_cluster(self):
     return Cluster.query.filter_by(zone_number=self.zone_number, id=self.cluster_id).first()
 
-  def get_shrink_collections(self, audit_vm_ids=None):
-    members = self.get_memberships()
-    if (len(members) == self.cardinality):
-      raise ExpandException("Cannot shrink {} ({}/{} members already exist)".format(
-        self.name, len(members), self.cardinality))
-    if (len(members) < self.cardinality):
-      raise ExpandException("Cannot shrink {} ({}/{} members, need to expand)".format(
-        self.name, len(members), self.cardinality))
-
-    # TODO: fix: If we continue down this road we'll have hit the ONE api twice for the same VM list...
-    member_vms_by_num = self.get_member_vms_by_num()
-
-    sorted_existing_numbers = list(member_vms_by_num.keys())
-    sorted_existing_numbers.sort()
-
-    shutdown_vm_ids = []
-    num_to_shrink_by = len(members) - self.cardinality
-    for i in range(0, num_to_shrink_by):
-      num_to_shrink = sorted_existing_numbers.pop()
-      shrink_names_by_number[num_to_shrink] = member_vms_by_num[num_to_shrink]
-
-    numbers = {}
-    for number in range(1, self.cardinality + 1):
-      numbers[number] = number
-
-    return shrink_names_by_number, member_vms_by_num, members, numbers
+  def get_members_to_shrink(self, members, confirm_vm_ids=None):
+    if len(members) <= self.cardinality:
+      return None
+    shrink = []
+    num_2_member = {m.parse_number(): m for m in members}
+    sorted_numbers = sorted(num_2_member)
+    while len(sorted_numbers) > self.cardinality:
+      candidate = num_2_member[sorted_numbers.pop()]
+      print('confirm list: {}'.format(confirm_vm_ids))
+      if confirm_vm_ids is not None and candidate.vm.id not in confirm_vm_ids:
+        raise Exception("member (name={}, vm_id={}) not in confirm list".format(
+          candidate.vm.name, candidate.vm.id))
+      shrink.append(candidate)
+    return shrink
 
   def get_expansion_collections(self):
     """
@@ -174,16 +152,43 @@ class PoolMembership(db.Model):
   pool = db.relationship('VirtualMachinePool', backref=db.backref('virtual_machine_pool', lazy='dynamic'))
   date_added = db.Column(db.DateTime, nullable=False)
 
-  def __init__(self, pool_id=None, pool=None, vm_id=None, date_added=None):
+  def __init__(self, pool_id=None, pool=None, vm_id=None, date_added=None, vm=None):
     self.pool_id = pool_id
     self.pool = pool
     self.vm_id = vm_id
     self.date_added = date_added
+    self.vm = vm
+
+  def is_done(self):
+    if self.vm.state_id >= 4:
+      return True
 
   @staticmethod
   def get_all(zone):
     return db.session.query(PoolMembership).join(
       PoolMembership.pool, aliased=True).filter_by(zone=zone)
+
+  def parse_number(self):
+    if self.vm is None:
+      raise Exception("cannot determine number from virtual machine name when vm is None")
+    num_pattern = re.compile("^[\dA-Za-z]+\D(\d+)\.")
+    match = num_pattern.match(self.vm.name)
+    if match is not None:
+      return int(match.group(1))
+    else:
+      raise Exception("cannot determine number from virtual machine name {}".format(self.vm.name))
+
+  def __str__(self):
+    return 'PoolMembership: pool_id={}, pool={}, vm_id={}, vm={}, date_added={}'.format(
+      self.pool_id,
+      self.pool,
+      self.vm_id,
+      self.vm,
+      self.date_added)
+
+  def __repr__(self):
+    self.__str__()
+
 
 
 class PoolEditForm(Form):

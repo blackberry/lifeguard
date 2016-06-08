@@ -3,7 +3,9 @@ class VirtualMachine():
                id=None,
                name=None,
                state=None,
+               state_id=None,
                lcm_state=None,
+               lcm_state_id=None,
                stime=None,
                memory=None,
                cpu=None,
@@ -17,8 +19,10 @@ class VirtualMachine():
                ip_address=None):
     self.id = id
     self.name = name
+    self.state_id = state_id
     self.state = state
     self.lcm_state = lcm_state
+    self.lcm_state_id = lcm_state_id
     self.stime = stime
     self.memory = memory
     self.cpu = cpu
@@ -88,7 +92,9 @@ class VirtualMachine():
       id=int(etree.find('ID').text),
       name=etree.find('NAME').text,
       state=VirtualMachine.state_by_id(int(etree.find('STATE').text)),
+      state_id=int(etree.find('STATE').text),
       lcm_state=VirtualMachine.lcm_state_by_id(int(etree.find('LCM_STATE').text)),
+      lcm_state_id=int(etree.find('LCM_STATE').text),
       stime=int(etree.find('STIME').text),
       memory=int(etree.find('TEMPLATE').find('MEMORY').text),
       cpu=float(etree.find('TEMPLATE').find('CPU').text))
@@ -118,3 +124,4 @@ class VirtualMachine():
       return self.cpu
     else:
       return '{}/{}'.format(self.cpu, self.vcpu)
+
