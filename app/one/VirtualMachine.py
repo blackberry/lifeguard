@@ -16,7 +16,8 @@ class VirtualMachine():
                disk_datastore_name = None,
                image_name=None,
                image_id=None,
-               ip_address=None):
+               ip_address=None,
+               template_id=None):
     self.id = id
     self.name = name
     self.state_id = state_id
@@ -34,6 +35,7 @@ class VirtualMachine():
     self.image_name = image_name
     self.image_id = image_id
     self.ip_address = ip_address
+    self.template_id = template_id
 
   @staticmethod
   def state_by_id(id):
@@ -98,6 +100,8 @@ class VirtualMachine():
       stime=int(etree.find('STIME').text),
       memory=int(etree.find('TEMPLATE').find('MEMORY').text),
       cpu=float(etree.find('TEMPLATE').find('CPU').text))
+    if etree.find('TEMPLATE').find('TEMPLATE_ID') is not None:
+      vm.template_id=int(etree.find('TEMPLATE').find('TEMPLATE_ID').text)
     if etree.find('TEMPLATE').find('DISK') is not None:
       vm.disk_cluster_id=int(etree.find('TEMPLATE').find('DISK').find('CLUSTER_ID').text)
       vm.disk_datastore_id=int(etree.find('TEMPLATE').find('DISK').find('DATASTORE_ID').text)

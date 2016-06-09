@@ -11,9 +11,11 @@
     <h3>Pool Actions:</h3>
     <ul>
         {% set cleanuprequried = pool.num_done_vms(members) %}
-        <li><a href="{{ url_for('vpool_bp.edit', pool_id=pool.id) }}">Edit Pool</a></li>
-        <li><a href="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}">Delete Pool</a></li>
-        <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Generate Template</a></li>
+        {% set numlegacy = pool.num_legacy_vms(members) %}
+        <li><a href="{{ url_for('vpool_bp.view', pool_id=pool.id) }}">View</a></li>
+        <li><a href="{{ url_for('vpool_bp.edit', pool_id=pool.id) }}">Edit</a></li>
+        <li><a href="{{ url_for('vpool_bp.delete', pool_id=pool.id) }}">Delete</a></li>
+        <li><a href="{{ url_for('vpool_bp.gen_template', pool_id=pool.id) }}">Template Test</a></li>
         {% if members|length > pool.cardinality %}
             <li><a href="{{ url_for('vpool_bp.shrink', pool_id=pool.id) }}">Shrink</a> <span class="red">({{ members|length - pool.cardinality }} VMs too many)</span></li>
         {%  elif members|length < pool.cardinality %}
@@ -21,6 +23,9 @@
         {% endif %}
         {% if cleanuprequried > 0 %}
             <li><a href="{{ url_for('vpool_bp.remove_done', pool_id=pool.id) }}">Cleanup</a> <span class="red">({{ cleanuprequried }} VMs are done)</span></li>
+        {% endif %}
+        {% if numlegacy > 0 %}
+            <li><a href="{{ url_for('vpool_bp.convert', pool_id=pool.id) }}">Convert</a> <span class="red">({{ numlegacy }} Legacy VMs )</span></li>
         {% endif %}
     </ul>
     <h3>Cluster Pools:</h3>
@@ -57,6 +62,7 @@
             <th class="data-cell">CPU</th>
             <th class="data-cell">MEM</th>
             <th class="data-cell">IP Address</th>
+            <th class="data-cell">&nbsp</th>
         </tr>
         {% for member in members %}
             <tr id="row_vm_id_{{ member.vm.id }}">
@@ -71,6 +77,10 @@
                 <td class="data-cell">{{ member.vm.cpu }}</td>
                 <td class="data-cell">{{ member.vm.memory_gb() }}</td>
                 <td class="data-cell">{{ member.vm.ip_address }}</td>
+                <td class="data-cell">
+                    {% if member.is_legacy() %}<span class="red"><i>LEGACY</i></span>{% endif %}
+                    {% if member.is_done() %}<span class="red"><i>DONE</i></span>{% endif %}
+                </td>
             </tr>
         {% endfor %}
     </table>

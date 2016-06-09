@@ -3,7 +3,7 @@ from flask.ext.login import login_required
 from app.views.cluster.models import Cluster, ClusterTemplateForm, CreateVmForm, GenerateTemplateForm
 from app.views.zone.models import Zone
 from app.views.vpool.models import VirtualMachinePool
-from app import db
+from app import app, db
 from app.one import OneProxy
 from jinja2 import Environment, FunctionLoader
 from app.jira_api import JiraApi
@@ -86,12 +86,13 @@ def vm_create(zone_number, cluster_id):
       vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
       jira_api = JiraApi()
       jira_api.connect()
-      jira_api.instance.create_issue(
-        project='IPGBD',
+      issue = jira_api.instance.create_issue(
+        project=app.config['JIRA_PROJECT'],
         summary='[auto] VM instantiated: {}'.format(vars['hostname']),
         description='Template: {}'.format(vm_template),
         customfield_13842=jira_api.get_datetime_now(),
         issuetype={'name': 'Task'})
+      jira_api.resolve(issue)
       one_proxy.create_vm(template=vm_template)
       flash('Created VM: {}'.format(vars['hostname']))
     except Exception as e:

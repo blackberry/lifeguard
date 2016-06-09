@@ -20,10 +20,16 @@ class JiraApi():
     self.instance = JIRA(options,
                 basic_auth=(app.config['JIRA_USERNAME'], app.config['JIRA_PASSWORD']))
 
-
   @staticmethod
   def ticket_link(issue):
     return '<a href="{}/browse/{}">{}</a>'.format(app.config['JIRA_HOSTNAME'], issue.key, issue.key)
+
+  def resolve(self, issue):
+    self.instance.transition_issue(
+      issue,
+      app.config['JIRA_RESOLVE_TRANSITION_ID'],
+      assignee={'name': app.config['JIRA_USERNAME']},
+      resolution={'id': app.config['JIRA_RESOLVE_STATE_ID']})
 
   def defect_for_exception(self, summary_title, e):
     return self.instance.create_issue(

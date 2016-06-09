@@ -47,15 +47,17 @@ class VirtualMachinePool(db.Model):
   def __repr__(self):
     self.__str__()
 
-  def get_memberships(self, vms=None):
+  def get_memberships(self, fetch_vms=True):
     """
     Get the PoolMembership objects that are associated with the pool
-    :param vms: If a collection of VMs is provided, the vm attribute of member is assigned
+    :param fetch_vms: If true, the vm attribute will be populated (incurs potentially
+    timely (1-2s) call to the ONE api
     :return:
     """
     memberships =  PoolMembership.query.filter_by(pool=self).all()
-    if vms is not None:
-      vms_dict = {vm.id: vm for vm in vms}
+    if fetch_vms:
+      one_proxy = OneProxy(self.cluster.zone.xmlrpc_uri, self.cluster.zone.session_string, verify_certs=False)
+      vms_dict = {vm.id: vm for vm in one_proxy.get_vms(INCLUDING_DONE)}
       for m in memberships:
         m.vm = vms_dict[m.vm_id]
     return memberships
@@ -67,12 +69,19 @@ class VirtualMachinePool(db.Model):
       raise Exception("Failed to parse pool name for hostname of number: {}".format(number))
     return '{}{}.{}'.format(match.group(1), number, match.group(2))
 
+  def num_legacy_vms(self, members):
+    num = 0
+    for m in members:
+      if m.is_legacy():
+        num += 1
+    return num
+
   def num_done_vms(self, members):
-    done = 0
+    num = 0
     for m in members:
       if m.is_done():
-        done += 1
-    return done
+        num += 1
+    return num
 
   def get_cluster(self):
     return Cluster.query.filter_by(zone_number=self.zone_number, id=self.cluster_id).first()
@@ -92,51 +101,30 @@ class VirtualMachinePool(db.Model):
       shrink.append(candidate)
     return shrink
 
-  def get_expansion_collections(self):
+  def get_expansion_names(self, members, form_expansion_names):
     """
     Checks if there are hosts that are required for expansion and if so generates their new
-    names by creating lowest missing values of 'N' in poolname<N>.domain.tld.  Other required
-    collections for error checking are also returned
-    of n
+    names by creating lowest missing values of 'N' in poolname<N>.sub.domain.tld.
     :return:
-    new_names_by_num dict: the new hostnames keyed off their 'N' value
-    member_vms_by_num dict: existing member hostnames keyed off their 'N' value
-    members PoolMembership[]: array of existing members
-    numbers dict: simple dict for all host numbers in range of 1 to cardinality
+    expansion_names: array of new hostnames that need to be instantiated
     """
-    members = self.get_memberships()
-    if (len(members) == self.cardinality):
-      raise ExpandException("Cannot expand {} ({}/{} members already exist)".format(
-        self.name, len(members), self.cardinality))
-    if (len(members) > self.cardinality):
-      raise ExpandException("Cannot expand {} ({}/{} members, need to shrink)".format(
-        self.name, len(members), self.cardinality))
-    member_vms_by_num = self.get_member_vms_by_num()
-    new_names_by_num = {}
+    if (len(members) >= self.cardinality):
+      return None
+    members_by_num = {m.parse_number(): m for m in members}
+    expansion_names = []
     for number in range(1, self.cardinality + 1):
-      if number not in member_vms_by_num:
-        new_names_by_num[int(number)] = self.name_for_number(number)
-
-    # Ensure that the number of new names we have matches the number we needed to expand with
-    needed = self.cardinality - len(member_vms_by_num)
-    if len(new_names_by_num) != needed:
-      raise ExpandException("Error: needed {} new VMs but could only infer {} misssing names".format(
-        needed, len(new_names_by_num)))
-
-    # Check that for each number that we require in our range from 1 to cardinality
-    # that we have either an existing member that matches the name or that a new name has
-    # been generated for it
-    numbers = {}
-    for number in range(1, self.cardinality + 1):
-      if number in new_names_by_num and number in member_vms_by_num:
-        raise Exception("VM number {} found in members and new names".format(number))
-      if number not in new_names_by_num and number not in member_vms_by_num:
-        raise Exception("VM number {} not found in members or new names".format(number))
-      numbers[number] = number
-
-    return new_names_by_num, member_vms_by_num, members, numbers
-
-
+      if number not in members_by_num.keys():
+        expansion_name = self.name_for_number(number)
+        if form_expansion_names is not None and expansion_name not in form_expansion_names:
+          raise Exception("Hostname for expansion not previously confirmed in form submission, "
+                          "review and confirm again: {}".format(expansion_name))
+        expansion_names.append(expansion_name)
+    if form_expansion_names is not None:
+      for form_name in form_expansion_names:
+        if form_name not in expansion_names:
+          raise Exception("Previously confirmed hostname for expansion no longer determined required, "
+                          "review and confirm again: {}".format(form_name))
+    return expansion_names
 
   @staticmethod
   def get_all(cluster):
@@ -151,13 +139,25 @@ class PoolMembership(db.Model):
   pool_id = db.Column(db.Integer, db.ForeignKey('virtual_machine_pool.id'), primary_key=True)
   pool = db.relationship('VirtualMachinePool', backref=db.backref('virtual_machine_pool', lazy='dynamic'))
   date_added = db.Column(db.DateTime, nullable=False)
+  template = db.Column(db.Text(), default='{% extends cluster.template %}')
 
-  def __init__(self, pool_id=None, pool=None, vm_id=None, date_added=None, vm=None):
+  def __init__(self, pool_id=None, pool=None, vm_id=None, date_added=None, vm=None, template=None):
     self.pool_id = pool_id
     self.pool = pool
     self.vm_id = vm_id
     self.date_added = date_added
     self.vm = vm
+    self.template = template
+
+  def remove_cmd(self):
+    if self.is_done():
+      return 'delete'
+    else:
+      return "shutdown"
+
+  def is_legacy(self):
+    if self.template is None or self.template == '':
+      return True
 
   def is_done(self):
     if self.vm.state_id >= 4:
@@ -188,7 +188,6 @@ class PoolMembership(db.Model):
 
   def __repr__(self):
     self.__str__()
-
 
 
 class PoolEditForm(Form):

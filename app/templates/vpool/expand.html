@@ -18,26 +18,12 @@
         <p>The highlighted hostnames will be instantiated to expand the pool to it's cardinality:</p>
 
         <ul>
-        {%  set prevent_submission = False %}
-        {% for number in numbers %}
-            {%  if number in member_vms_by_num %}
-                <li class="lowlight">{{ member_vms_by_num[number].name }}</li>
-            {% elif number in new_names_by_num %}
-                <input type="hidden" name="new_hostname_list" value="{{ new_names_by_num[number] }}" />
-                <li><strong>{{ new_names_by_num[number] }}</strong></li>
-            {% else %}
-                {%  set prevent_submission = True %}
-                <li>ERROR: number {{ number }} not found in member list or new names list!</li>
-            {% endif %}
+        {% for name in expansion_names %}
+            <input type="hidden" name="expansion_names" value="{{ name }}" />
+            <li><strong>{{ name }}</strong></li>
         {% endfor %}
         </ul>
-
-        {%  if prevent_submission %}
-            <p>Expansion cannot continue with the errors above</p>
-            <br />
-        {% else %}
-            <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;
-        {%  endif %}
+        <button type="submit" name="action" value="confirm" class="btn btn-default">Confirm</button> &nbsp;
         <button type="submit" name="action" value="cancel" class="btn btn-default">Cancel</button>
     </form>
 {% endblock %}

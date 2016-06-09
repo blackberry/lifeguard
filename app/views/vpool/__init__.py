@@ -1,8 +1,10 @@
-import sys, traceback
+import sys, traceback, re
 from flask import request, redirect, url_for, render_template, flash, Blueprint, g, Markup
 from flask.ext.login import current_user, login_required
 from jinja2 import Environment
-from app import db
+from datetime import datetime
+from flask.ext.login import current_user
+from app import app, db
 from app.one import OneProxy, INCLUDING_DONE
 from app.views.template.models import ObjectLoader
 from app.views.vpool.models import PoolMembership, VirtualMachinePool, PoolEditForm, GenerateTemplateForm, ExpandException
@@ -11,19 +13,12 @@ from app.views.zone.models import Zone
 from app.views.cluster.models import Cluster
 from app.views.template.models import VarParser
 from app.jira_api import JiraApi
-from datetime import datetime
-from flask.ext.login import current_user
-
-import timeit
-import re
-
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
 @vpool_bp.before_request
 def get_current_user():
   g.user = current_user
-
 
 @vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -34,6 +29,14 @@ def test(pool_id):
   pool = VirtualMachinePool.query.get(pool_id)
   return render_template('vpool/test.html', pool=pool)
 
+@vpool_bp.route('/vpool/convert/<int:pool_id>', methods=['GET', 'POST'])
+@login_required
+def convert(pool_id):
+  form = ActionForm()
+  jira = JiraApi()
+  jira.connect()
+  pool = VirtualMachinePool.query.get(pool_id)
+  return render_template('vpool/test.html', pool=pool)
 
 @vpool_bp.route('/vpool/remove_done/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -44,8 +47,7 @@ def remove_done(pool_id):
   pool = one_proxy = members = None
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
-    members = pool.get_memberships(one_proxy.get_vms(INCLUDING_DONE))
+    members = pool.get_memberships()
   except Exception as e:
     flash("There was an error finshed VMs: {}".format(e), category='danger')
     return redirect(url_for('vpool_bp.view', pool_id=pool.id))
@@ -61,7 +63,7 @@ def remove_done(pool_id):
           if m.vm.id in vm_ids_to_delete:
             delete_members.append(m)
         delete_ticket = jira.instance.create_issue(
-          project='IPGBD',
+          project=app.config['JIRA_PROJECT'],
           summary='[auto-{}] Pool Cleanup: {} (deleting {} done VMs)'.format(
             current_user.username, pool.name, len(vm_ids_to_delete)),
           description="Pool cleanup triggered that will delete {} VM(s): \n\n*{}".format(
@@ -71,10 +73,11 @@ def remove_done(pool_id):
           issuetype={'name': 'Task'})
         one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
         for m in delete_members:
-          one_proxy.action_vm("delete", m.vm.id)
+          one_proxy.action_vm(m.remove_cmd(), m.vm.id)
           db.session.delete(m)
         db.session.commit()
         flash('Deleted {} done VMs to cleanup pool {}'.format(len(delete_members), pool.name))
+        jira.resolve(delete_ticket)
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
     except Exception as e:
       flash("Error performing cleanup of pool {}: {}".format(pool.name, e), category='danger')
@@ -85,21 +88,16 @@ def remove_done(pool_id):
                          pool=pool,
                          members=members)
 
-
-
-
 @vpool_bp.route('/vpool/shrink/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def shrink(pool_id):
-  pool = one_proxy = members = shrink_vm_ids = None
+  pool = shrink_vm_ids = None
   form = ActionForm()
   jira = JiraApi()
   jira.connect()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
-    vms = one_proxy.get_vms(INCLUDING_DONE)
-    members = pool.get_memberships(vms)
+    members = pool.get_memberships()
     if request.method == 'POST' and form.validate():
       shrink_vm_ids = [int(id) for id in  request.form.getlist('shrink_vm_ids')]
     shrink_members = pool.get_members_to_shrink(members, shrink_vm_ids)
@@ -116,7 +114,7 @@ def shrink(pool_id):
       elif request.form['action'] == 'confirm':
         vm_ids_to_shutdown = request.form.getlist('shrink_vm_ids')
         shrink_ticket = jira.instance.create_issue(
-          project='IPGBD',
+          project=app.config['JIRA_PROJECT'],
           summary='[auto-{}] Pool Shrink: {} ({} to {})'.format(
             current_user.username, pool.name, len(members), pool.cardinality),
           description="Pool shrink triggered that will shutdown {} VM(s): \n\n*{}".format(
@@ -124,11 +122,13 @@ def shrink(pool_id):
             "\n*".join(['ID {}: {} ({})'.format(m.vm.id, m.vm.name, m.vm.ip_address) for m in shrink_members])),
           customfield_13842=jira.get_datetime_now(),
           issuetype={'name': 'Task'})
+        #jira.instance.transition_issue(shrink_ticket, '5', assignee={'name': 'ipgbdautomation'}, resolution={'id': '32'})
         one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
         for m in shrink_members:
-          one_proxy.action_vm("shutdown", m.vm.id)
+          one_proxy.action_vm(m.remove_cmd(), m.vm.id)
           db.session.delete(m)
         db.session.commit()
+        jira.resolve(shrink_ticket)
         flash('Shutdown {} VMs to shrink pool {} to cardinality of {}'.format(
           len(shrink_members), pool.name, pool.cardinality))
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
@@ -141,19 +141,21 @@ def shrink(pool_id):
                          pool=pool,
                          shrink_members=shrink_members)
 
-
 @vpool_bp.route('/vpool/expand/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def expand(pool_id):
-  pool = members = member_vms_by_num = new_names_by_num = None
+  pool = members = expansion_names = form_expansion_names = None
   form = ActionForm()
-  jira_api = JiraApi()
-  jira_api.connect()
+  jira = JiraApi()
   try:
+    jira.connect()
     pool = VirtualMachinePool.query.get(pool_id)
-    new_names_by_num, member_vms_by_num, members, numbers = pool.get_expansion_collections()
+    members = pool.get_memberships()
+    if request.method == 'POST' and form.validate():
+      form_expansion_names = request.form.getlist('expansion_names')
+    expansion_names = pool.get_expansion_names(members, form_expansion_names)
   except Exception as e:
-    flash("There was an error determining new names required for expansion: {}".format(e))
+    flash("There was an error determining new names required for expansion: {}".format(e), category='danger')
     return redirect(url_for('vpool_bp.view', pool_id=pool.id))
   if request.method == 'POST' and form.validate():
     expansion_ticket = None
@@ -162,30 +164,20 @@ def expand(pool_id):
         flash('Expansion of {} cancelled'.format(pool.name), category='info')
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
       elif request.form['action'] == 'confirm':
-        form_new_names = request.form.getlist('new_hostname_list')
-        if len(form_new_names) != len(new_names_by_num):
-          raise("The expansion form was submitted with {} hostnames but there are now "
-                "{} required after the form was submitted".format(len(form_new_names), len(new_names_by_num)))
-        for name in form_new_names:
-          new_num = VirtualMachinePool.get_num_from_name(name)
-          if new_num not in new_names_by_num:
-            raise ExpandException("Form contained a new name ({}) but number {} is no longer required".format(
-              name, new_num))
-        # All reasonalbe checks are performed, let's instantiate!
-        expansion_ticket = jira_api.instance.create_issue(
-          project='IPGBD',
+        expansion_ticket = jira.instance.create_issue(
+          project=app.config['JIRA_PROJECT'],
           summary='[auto-{}] Pool Expansion: {} ({} to {})'.format(
             current_user.username, pool.name, len(members), pool.cardinality),
           description="Pool expansion triggered that will instantiate {} new VM(s): \n\n*{}".format(
-            len(form_new_names),
-            "\n*".join(form_new_names)),
-          customfield_13842=jira_api.get_datetime_now(),
+            len(expansion_names),
+            "\n*".join(expansion_names)),
+          customfield_13842=jira.get_datetime_now(),
           issuetype={'name': 'Task'})
         env = Environment(loader=ObjectLoader())
         one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
         new_members = []
         try:
-          for hostname in form_new_names:
+          for hostname in expansion_names:
             vars =  VarParser.parse_kv_strings_to_dict(
               pool.cluster.zone.vars,
               pool.cluster.vars,
@@ -193,21 +185,23 @@ def expand(pool_id):
               'hostname={}'.format(hostname))
             vm_template = env.from_string(pool.template).render(pool=pool, vars=vars)
             vm_id = one_proxy.create_vm(template=vm_template)
-            new_member = PoolMembership(pool=pool, vm_id=vm_id, date_added=datetime.utcnow())
+            new_member = PoolMembership(pool=pool, vm_id=vm_id, date_added=datetime.utcnow(), template=vm_template)
             db.session.add(new_member)
             new_members.append(new_member)
           db.session.commit()
+          jira.resolve(expansion_ticket)
         except Exception as e:
-          try:
-            for member in new_members:
-              one_proxy.action_vm("delete", member.vm_id)
-          except Exception as e:
-            flash("VM cleanup of vm_id={} failed after pool expansion failed".format(member.vm_id))
+          for member in new_members:
+             try:
+               one_proxy.action_vm("delete", member.vm_id)
+             except Exception as one_exception:
+               flash("VM cleanup of vm_id={} failed after pool expansion failed: {}".format(
+                 member.vm_id, one_exception))
           raise e
-        flash("Expanded pool {} under ticket {}".format(pool.name, expansion_ticket.id))
+        flash("Expanded pool {} under ticket {}".format(pool.name, expansion_ticket.key))
         return redirect(url_for('vpool_bp.view', pool_id=pool.id))
     except Exception as e:
-      defect_ticket = jira_api.defect_for_exception("Pool Expansion Failed", e)
+      defect_ticket = jira.defect_for_exception("Pool Expansion Failed", e)
       flash(Markup('Error expanding pool {} (defect ticket contains exception: {})'.format(
         pool.name, JiraApi.ticket_link(defect_ticket))), category='danger')
 
@@ -215,30 +209,25 @@ def expand(pool_id):
   return render_template('vpool/expand.html',
                          form=form,
                          pool=pool,
-                         numbers=numbers,
-                         member_vms_by_num=member_vms_by_num,
-                         new_names_by_num=new_names_by_num)
-
+                         expansion_names=expansion_names)
 
 @vpool_bp.route('/vpool/view/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def view(pool_id):
-  pool = None
+  pool = members = None
   vms_by_id = {}
   form = ActionForm()
   try:
     pool = VirtualMachinePool.query.get(pool_id)
-    one_proxy = OneProxy(pool.cluster.zone.xmlrpc_uri, pool.cluster.zone.session_string, verify_certs=False)
-    start_time = timeit.default_timer()
-    members = pool.get_memberships(vms = one_proxy.get_vms(INCLUDING_DONE))
+    members = pool.get_memberships()
   except Exception as e:
     traceback.print_exc(file=sys.stdout)
     flash("There was an error fetching pool_id={}: {}".format(pool_id, e), category='danger')
+    return redirect(url_for('cluster_bp.view', cluster_id=pool.cluster.id, zone_number=pool.cluster.zone.number))
   return render_template('vpool/view.html',
                          form=form,
                          pool=pool,
                          members=members)
-
 
 @vpool_bp.route('/vpool/delete/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -273,12 +262,18 @@ def delete(pool_id):
                          pool=pool,
                          vms_by_id=vms_by_id)
 
-
 @vpool_bp.route('/vpool/<int:pool_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit(pool_id):
-  pool = VirtualMachinePool.query.get(pool_id)
-  form = PoolEditForm(request.form, obj=pool)
+  form = pool = one_proxy = members = None
+  try:
+    pool = VirtualMachinePool.query.get(pool_id)
+    form = PoolEditForm(request.form, obj=pool)
+    members = pool.get_memberships()
+  except Exception as e:
+    flash("There was an error fetching objects required for editing pool {}: {}".format(
+      pool.name, e))
+    return redirect(url_for('vpool_bp.view', pool_id=pool.id))
   if request.method == 'POST':
     if request.form['action'] == "cancel":
       flash('Cancelled {} pool template update'.format(pool.name), category="info")
@@ -303,6 +298,7 @@ def edit(pool_id):
     flash("Errors must be resolved before pool template can be saved", 'danger')
   return render_template('vpool/edit.html',
                          form=form,
+                         members=members,
                          pool=pool)
 
 
@@ -311,6 +307,7 @@ def edit(pool_id):
 def gen_template(pool_id):
   pool = VirtualMachinePool.query.get(pool_id)
   zone = Zone.query.get(pool.cluster.zone.number)
+  members = pool.get_memberships()
   cluster = Cluster.query.filter_by(zone=zone, id=pool.cluster.id).first()
   form = GenerateTemplateForm(request.form)
   vars = {}
@@ -327,23 +324,20 @@ def gen_template(pool_id):
         zone.vars,
         cluster.vars,
         pool.vars,
-        var_string
-      )
-      print('in view the vars are: {}'.format(vars))
+        var_string)
       env = Environment(loader=ObjectLoader())
       template = env.from_string(pool.template).render(pool=pool, cluster=cluster, vars=vars)
       flash('Template Generated for {}'.format(pool.name))
     except Exception as e:
-      #raise e
       flash("Error generating template: {}".format(e), category='danger')
   return render_template('vpool/generate_template.html',
                          pool=pool,
+                         members=members,
                          cluster=cluster,
                          form=form,
                          zone=zone,
                          var_string=var_string,
                          template=template)
-
 
 @vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
