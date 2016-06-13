@@ -84,15 +84,15 @@ def vm_create(zone_number, cluster_id):
       one_proxy = OneProxy(zone.xmlrpc_uri, zone.session_string, verify_certs=False)
       env = Environment(loader=ObjectLoader())
       vm_template = env.from_string(cluster.template).render(cluster=cluster, vars=vars)
-      jira_api = JiraApi()
-      jira_api.connect()
-      issue = jira_api.instance.create_issue(
+      jira = JiraApi()
+      jira.connect()
+      issue = jira.instance.create_issue(
         project=app.config['JIRA_PROJECT'],
         summary='[auto] VM instantiated: {}'.format(vars['hostname']),
         description='Template: {}'.format(vm_template),
-        customfield_13842=jira_api.get_datetime_now(),
+        customfield_13842=jira.get_datetime_now(),
         issuetype={'name': 'Task'})
-      jira_api.resolve(issue)
+      jira.resolve(issue)
       one_proxy.create_vm(template=vm_template)
       flash('Created VM: {}'.format(vars['hostname']))
     except Exception as e:

@@ -2,9 +2,11 @@ from flask_wtf import Form
 from wtforms import TextAreaField, StringField
 from wtforms.validators import InputRequired
 from app.views.cluster.models import Cluster
+from app.views.template.models import VarParser, ObjectLoader
 from app import db
 from app.one import OneProxy
 from app.one import INCLUDING_DONE
+from  jinja2 import Environment
 import re
 
 
@@ -162,6 +164,15 @@ class PoolMembership(db.Model):
   def is_done(self):
     if self.vm.state_id >= 4:
       return True
+
+  def is_current(self):
+    env = Environment(loader=ObjectLoader())
+    vars =  VarParser.parse_kv_strings_to_dict(
+      self.pool.cluster.zone.vars,
+      self.pool.cluster.vars,
+      self.pool.vars,
+      'hostname={}'.format(self.vm.name))
+    return self.template == env.from_string(self.pool.template).render(pool=self.pool, vars=vars)
 
   @staticmethod
   def get_all(zone):
