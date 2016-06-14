@@ -3,32 +3,36 @@ from collections import Counter
 from app import app
 from datetime import datetime, timedelta, timezone
 from flask.ext.login import current_user
-
 import pytz
 from datetime import datetime, timedelta
+
 
 class JiraApi():
 
   str_jira_scheduled = "%Y-%m-%dT%H:%M:%S.0%z"
 
-  def __init__(self, instance=None):
+  def __init__(self,
+               instance=None,
+               approver_instance=None):
     self.instance = instance
+    self.approver_instance = approver_instance
 
   @staticmethod
   def next_immediate_window_dates():
     tz = pytz.timezone(app.config['CM_TZ'])
-    now = pytz.utc.localize(datetime.utcnow()).astimezone(tz)
+    now_utc = datetime.utcnow()
+    now_tz = tz.localize(now_utc)
     start = None
-    if now.hour < app.config['CM_DEADLINE_HOUR']  and now.minute < app.config['CM_DEADLINE_MIN']:
-      # starting at 3pm today
-      start = datetime(now.year, now.month, now.day, app.config['CM_SAME_DAY_START_HOUR'], 0, 0, 0, tzinfo=tz)
+    if now_tz.hour <= app.config['CM_DEADLINE_HOUR']  and now_tz.minute < app.config['CM_DEADLINE_MIN']:
+      start = tz.localize(datetime(now_tz.year, now_tz.month, now_tz.day, app.config['CM_SAME_DAY_START_HOUR']))
     else:
       delay_hours = timedelta(hours=app.config['CM_DEADLINE_MISSED_DELAY_HOURS'])
-      start_day = now + delay_hours
-      start = datetime(start_day.year, start_day.month, start_day.day, app.config['CM_DEADLINE_MISSED_START_HOUR'], 0, 0, 0, tzinfo=tz)
-    end_delta = timedelta(hours=app.config['CM_WINDOW_LEN_HOURS'])
-    end = start + end_delta
-    return start.strftime(JiraApi.str_jira_scheduled), end.strftime(JiraApi.str_jira_scheduled)
+      start_day = now_tz + delay_hours
+      start = tz.localize(datetime(
+        start_day.year, start_day.month, start_day.day, app.config['CM_DEADLINE_MISSED_START_HOUR']))
+    end = start + timedelta(hours=app.config['CM_WINDOW_LEN_HOURS'])
+    return start.strftime(JiraApi.str_jira_scheduled), \
+           end.strftime(JiraApi.str_jira_scheduled)
 
   @staticmethod
   def get_datetime_now():
@@ -37,9 +41,11 @@ class JiraApi():
     return now.strftime(JiraApi.str_jira_scheduled)
 
   def connect(self):
-    options = {'server': app.config['JIRA_HOSTNAME'],'verify':False}
+    options = {'server': app.config['JIRA_HOSTNAME'], 'verify': False, 'check_update': False}
     self.instance = JIRA(options,
                 basic_auth=(app.config['JIRA_USERNAME'], app.config['JIRA_PASSWORD']))
+    self.approver_instance = JIRA(options,
+                basic_auth=(app.config['JIRA_APPROVER_USERNAME'], app.config['JIRA_APPROVER_PASSWORD']))
 
   @staticmethod
   def ticket_link(issue):
@@ -64,8 +70,3 @@ class JiraApi():
         {"value": "Risk Avoidance"}
       ],
       issuetype={'name': 'Defect'})
-
-
-
-
-

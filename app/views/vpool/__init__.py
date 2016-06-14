@@ -17,11 +17,9 @@ from app.jira_api import JiraApi
 
 vpool_bp = Blueprint('vpool_bp', __name__, template_folder='templates')
 
-
 @vpool_bp.before_request
 def get_current_user():
   g.user = current_user
-
 
 @vpool_bp.route('/vpool/test/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -32,7 +30,6 @@ def test(pool_id):
   pool = VirtualMachinePool.query.get(pool_id)
   return render_template('vpool/test.html', pool=pool)
 
-
 @vpool_bp.route('/vpool/convert/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def convert(pool_id):
@@ -41,7 +38,6 @@ def convert(pool_id):
   jira.connect()
   pool = VirtualMachinePool.query.get(pool_id)
   return render_template('vpool/test.html', pool=pool)
-
 
 @vpool_bp.route('/vpool/remove_done/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -92,7 +88,6 @@ def remove_done(pool_id):
                          form=form,
                          pool=pool,
                          members=members)
-
 
 @vpool_bp.route('/vpool/shrink/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -147,7 +142,6 @@ def shrink(pool_id):
                          pool=pool,
                          shrink_members=shrink_members)
 
-
 @vpool_bp.route('/vpool/expand/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
 def expand(pool_id):
@@ -174,11 +168,12 @@ def expand(pool_id):
         logging = jira.instance.issue('SVC-1020')
         print("logging service obtained: {}".format(logging.key))
         start, end = jira.next_immediate_window_dates()
-        #flash("start={}, end={}".format(start, end))
+        flash("start={}, end={}".format(start, end))
         if True:
           crq = jira.instance.create_issue(
-            project='CRQ',
+            project=app.config['JIRA_CRQ_PROJECT'],
             issuetype={'name': 'Change Request'},
+            assignee={'name': app.config['JIRA_USERNAME']},
             summary='[auto-{}] Pool Expansion: {} ({} to {})'.format(
               current_user.username, pool.name, len(members), pool.cardinality),
             description="Pool expansion triggered that will instantiate {} new VM(s): \n\n*{}".format(
@@ -191,16 +186,22 @@ def expand(pool_id):
             customfield_19430={'value': 'No conflict with any restrictions'},
             customfield_14135={'value': 'IPG', 'child': {'value': 'IPG Big Data'}},
             customfield_17679="Pool expansion required")
-          print("chagne request created: {}".format(crq.key))
+          flash(Markup("CRQ Created: {}".format(JiraApi.ticket_link(crq))))
+          jira.instance.transition_issue(crq, app.config['JIRA_TRANSITION_CRQ_PLANNING'])
           jira.instance.create_issue_link('Relate', crq, logging)
           task = jira.instance.create_issue(
             issuetype={'name': 'MOP Task'},
-            project='CRQ',
+            assignee={'name': app.config['JIRA_USERNAME']},
+            project=app.config['JIRA_CRQ_PROJECT'],
             summary='[auto-{}] expansion'.format(current_user.username),
             parent={'key': crq.key},
             customfield_14135={'value': 'IPG', 'child': {'value': 'IPG Big Data'}},
             customfield_15150={'value': 'No'})
-          print("task created: {}".format(task.key))
+          flash(Markup("Sub task created: {}".format(JiraApi.ticket_link(task))))
+          jira.instance.transition_issue(task, app.config['JIRA_TRANSITION_TASK_PLANNING'])
+          jira.instance.transition_issue(task, app.config['JIRA_TRANSITION_TASK_WRITTEN'])
+          jira.approver_instance.transition_issue(task, app.config['JIRA_TRANSITION_TASK_APPROVED'])
+          jira.instance.transition_issue(crq, app.config['JIRA_TRANSITION_CRQ_PLANNED_CHANGE'])
           env = Environment(loader=ObjectLoader())
           for hostname in expansion_names:
             vars = VarParser.parse_kv_strings_to_dict(
@@ -214,6 +215,7 @@ def expand(pool_id):
               issue=task,
               filename='{}.template'.format(hostname),
               attachment=attachment_content)
+          jira.approver_instance.transition_issue(crq, app.config['JIRA_TRANSITION_CRQ_APPROVE'])
           flash(Markup("Pool expansion ticket created for pool {} ticket {}".format(pool.name, JiraApi.ticket_link(crq))))
       return redirect(url_for('vpool_bp.view', pool_id=pool.id))
     except Exception as e:
@@ -226,7 +228,6 @@ def expand(pool_id):
                        form=form,
                        pool=pool,
                        expansion_names=expansion_names)
-
 
 @vpool_bp.route('/vpool/view/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -245,7 +246,6 @@ def view(pool_id):
                          form=form,
                          pool=pool,
                          members=members)
-
 
 @vpool_bp.route('/vpool/delete/<int:pool_id>', methods=['GET', 'POST'])
 @login_required
@@ -279,7 +279,6 @@ def delete(pool_id):
                          form=form,
                          pool=pool,
                          vms_by_id=vms_by_id)
-
 
 @vpool_bp.route('/vpool/<int:pool_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -320,7 +319,6 @@ def edit(pool_id):
                          members=members,
                          pool=pool)
 
-
 @vpool_bp.route('/vpool/<int:pool_id>/generate_template', methods=['GET', 'POST'])
 @login_required
 def gen_template(pool_id):
@@ -357,7 +355,6 @@ def gen_template(pool_id):
                          zone=zone,
                          var_string=var_string,
                          template=template)
-
 
 @vpool_bp.route('/assign_to_pool/zone/<int:zone_number>/cluster/<int:cluster_id>', methods=['GET', 'POST'])
 @login_required
